@@ -1,0 +1,137 @@
+{
+    "glm":
+    {
+        "win32_x86":
+        {
+            "defines":
+            {
+                "base":[],
+                "debug":[],
+                "release":[],
+                "optimize_size":[],
+
+                "stlib":[],
+                "stlib_debug":[],
+                "stlib_release":[],
+                "stlib_optimize_size":[],
+
+                "shlib":[],
+                "shlib_debug":[],
+                "shlib_release":[],
+                "shlib_optimize_size":[]
+            },
+
+            "includes":[],
+
+            "shlib_link":[],
+            "shlib_path":[],
+
+            "stlib_link":[],
+            "stlib_path":[],
+
+            "optional":"false",
+            "type":"headers",
+
+            "code":"glm_test.cpp"
+        },
+        "win32_x64":
+        {
+            "defines":
+            {
+                "base":[],
+                "debug":[],
+                "release":[],
+                "optimize_size":[],
+
+                "stlib":[],
+                "stlib_debug":[],
+                "stlib_release":[],
+                "stlib_optimize_size":[],
+
+                "shlib":[],
+                "shlib_debug":[],
+                "shlib_release":[],
+                "shlib_optimize_size":[]
+            },
+
+            "includes":[],
+
+            "shlib_link":[],
+            "shlib_path":[],
+
+            "stlib_link":[],
+            "stlib_path":[],
+
+            "optional":"true",
+            "type":"headers",
+
+            "code":"glm_test.cpp"
+        },
+        "linux_x86":
+        {
+            "defines":
+            {
+                "base":[],
+                "debug":[],
+                "release":[],
+                "optimize_size":[],
+
+                "stlib":[],
+                "stlib_debug":[],
+                "stlib_release":[],
+                "stlib_optimize_size":[],
+
+                "shlib":[],
+                "shlib_debug":[],
+                "shlib_release":[],
+                "shlib_optimize_size":[]
+            },
+
+            "includes":[],
+
+            "shlib_link":[],
+            "shlib_path":[],
+
+            "stlib_link":[],
+            "stlib_path":[],
+
+            "optional":"false",
+            "type":"headers",
+
+            "code":"glm_test.cpp"
+        },
+        "linux_x64":
+        {
+            "defines":
+            {
+                "base":[],
+                "debug":[],
+                "release":[],
+                "optimize_size":[],
+
+                "stlib":[],
+                "stlib_debug":[],
+                "stlib_release":[],
+                "stlib_optimize_size":[],
+
+                "shlib":[],
+                "shlib_debug":[],
+                "shlib_release":[],
+                "shlib_optimize_size":[]
+            },
+
+            "includes":[],
+
+            "shlib_link":[],
+            "shlib_path":[],
+
+            "stlib_link":[],
+            "stlib_path":[],
+
+            "optional":"false",
+            "type":"headers",
+
+            "code":"glm_test.cpp"
+        }
+    }
+}

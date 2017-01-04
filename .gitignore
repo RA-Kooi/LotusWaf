@@ -1,0 +1,6 @@
+.lock-*
+*waf3-*.*.*-*
+build
+__pycache__
+
+*.swp
