@@ -1,24 +1,20 @@
 {
-    "glm":
+    "skeleton_dependency":
     {
-        "win32_x86":
+        "type":"headers",
+
+        "common":
         {
             "defines":
             {
                 "base":[],
-                "debug":[],
-                "release":[],
-                "optimize_size":[],
+                "skeleton_configuration":[],
 
                 "stlib":[],
-                "stlib_debug":[],
-                "stlib_release":[],
-                "stlib_optimize_size":[],
+                "stlib_skeleton_configuration":[],
 
                 "shlib":[],
-                "shlib_debug":[],
-                "shlib_release":[],
-                "shlib_optimize_size":[]
+                "shlib_skeleton_configuration":[]
             },
 
             "includes":[],
@@ -30,108 +26,18 @@
             "stlib_path":[],
 
             "optional":"false",
-            "type":"headers",
 
-            "code":"glm_test.cpp"
+            "code":"skeleton.cpp"
         },
-        "win32_x64":
+        "skeleton_toolset":
         {
             "defines":
             {
-                "base":[],
-                "debug":[],
-                "release":[],
-                "optimize_size":[],
-
-                "stlib":[],
-                "stlib_debug":[],
-                "stlib_release":[],
-                "stlib_optimize_size":[],
-
-                "shlib":[],
-                "shlib_debug":[],
-                "shlib_release":[],
-                "shlib_optimize_size":[]
+                "base":["Things can differ from the common toolset"]
             },
 
-            "includes":[],
-
-            "shlib_link":[],
-            "shlib_path":[],
-
-            "stlib_link":[],
-            "stlib_path":[],
-
-            "optional":"true",
-            "type":"headers",
-
-            "code":"glm_test.cpp"
-        },
-        "linux_x86":
-        {
-            "defines":
-            {
-                "base":[],
-                "debug":[],
-                "release":[],
-                "optimize_size":[],
-
-                "stlib":[],
-                "stlib_debug":[],
-                "stlib_release":[],
-                "stlib_optimize_size":[],
-
-                "shlib":[],
-                "shlib_debug":[],
-                "shlib_release":[],
-                "shlib_optimize_size":[]
-            },
-
-            "includes":[],
-
-            "shlib_link":[],
-            "shlib_path":[],
-
-            "stlib_link":[],
-            "stlib_path":[],
-
-            "optional":"false",
-            "type":"headers",
-
-            "code":"glm_test.cpp"
-        },
-        "linux_x64":
-        {
-            "defines":
-            {
-                "base":[],
-                "debug":[],
-                "release":[],
-                "optimize_size":[],
-
-                "stlib":[],
-                "stlib_debug":[],
-                "stlib_release":[],
-                "stlib_optimize_size":[],
-
-                "shlib":[],
-                "shlib_debug":[],
-                "shlib_release":[],
-                "shlib_optimize_size":[]
-            },
-
-            "includes":[],
-
-            "shlib_link":[],
-            "shlib_path":[],
-
-            "stlib_link":[],
-            "stlib_path":[],
-
-            "optional":"false",
-            "type":"headers",
-
-            "code":"glm_test.cpp"
+            "includes":["And just about everything is optional"],
+            "optional": true
         }
     }
 }

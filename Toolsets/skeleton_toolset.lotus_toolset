@@ -1,0 +1,42 @@
+{
+	"cc":"clang",
+	"cc_path":"clang",
+
+	"cxx":"clang++",
+	"cxx_path":"clang++",
+
+	"system_includes":[],
+
+	"defines":
+	{
+		"base":["UNICODE", "_UNICODE"],
+		"skeleton_configuration":["Per configuration defines"],
+
+		"stlib":[],
+		"stlib_skeleton_configuration":[],
+
+		"shlib":[],
+		"shlib_skeleton_configuration":[],
+
+		"exe":[],
+		"exe_skeleton_configuration":[]
+	},
+
+	"cc_flags": ["-std=c11", "-Wall"],
+	"cc_flags_skeleton_configuration":[],
+
+	"cxx_flags":["-std=c++14", "-Wall"],
+	"cxx_flags_skeleton_configuration":[],
+
+	"stlib_flags":["rcs"],
+	"stlib_flags_skeleton_configuration":[],
+
+	"ld_flags":["-municode"],
+	"ld_flags_skeleton_configuration":[],
+
+	"shlib_flags":["-shared"],
+	"shlib_flags_skeleton_configuration":[],
+
+	"exe_flags":["-mwindows"],
+	"exe_flags_skeleton_configuration":[]
+}

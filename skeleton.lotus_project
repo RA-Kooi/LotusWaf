@@ -1,0 +1,34 @@
+{
+    "type":"exe",
+    "unity_build":true,
+    "target":"skeleton",
+    "name":"skeleton",
+    "version":"1.0.0",
+
+    "defines":
+    {
+        "base":[],
+        "skeleton_configuration":[],
+
+        "stlib":["TEST_LIB"],
+        "stlib_skeleton_configuration":[],
+
+        "shlib":["TEST_DLL"],
+        "shlib_skeleton_configuration":[],
+
+        "exe":["TEST_EXE"],
+        "exe_skeleton_configuration":[]
+    },
+
+    "includes":[],
+    "export_includes":
+    [
+        "include/paths/that/carry/over/in/projects/that/use/this/as/a/dependency"
+    ],
+
+    "rpath":["$ORIGIN"],
+
+    "use":["skeleton"],
+
+    "sources":[]
+}
