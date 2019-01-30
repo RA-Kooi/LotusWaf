@@ -40,11 +40,15 @@ def load_configuration_options(config, opt):
         toolset_help = toolset_help + ' }, '
     #endfor
 
-    toolset_help = toolset_help[:-2] + '[default: %s]' % config['toolsets']\
-            [default_platform][0]
+    if default_platform in config['toolsets']:
+        toolset_help = toolset_help[:-2] + '[default: %s]' % config['toolsets']\
+                [default_platform][0]
 
-    opt.add_option('--toolset', action='store', dest='toolset', \
-        default=config['toolsets'][default_platform][0], help=toolset_help)
+        opt.add_option('--toolset', action='store', dest='toolset', \
+            default=config['toolsets'][default_platform][0], help=toolset_help)
+    else:
+        print('No platform defined with the name ' + default_platform + \
+            ', unable to print toolset help.')
 
 # Show use specific help output when waf --help is executed
 def load_use_options(opt):
@@ -107,7 +111,7 @@ def load_use_options(opt):
     #endfor
 
 # Load the toolset passed to waf via --toolset and return it as a dictionary
-def get_toolset(config, cfg):
+def get_toolset(cfg):
     import json
     import os
     # TODO: Check if toolset is valid
@@ -256,19 +260,38 @@ def configure_single_use(cfg, use, use_flag):
             flags[toolset]['includes'] = use[use_flag][toolset]['includes']
         #endif
 
-        # TODO, check if this is a non-gcc compatible compiler
+        current_toolset = get_toolset(cfg)
+
+        include_flags = None
+        if 'system_include_flags' in current_toolset:
+            include_flags = current_toolset['system_include_flags']
+        #endif
+
+        if include_flags == '':
+            include_flags = None
+        #endif
+
         def make_flags_absolute(relative_path):
-            return '-isystem' \
-                    + os.path.normcase( \
-                        os.path.normpath( \
-                            os.path.join( \
-                                cfg.path.abspath(), \
-                                relative_path)))
+            return os.path.normcase( \
+                os.path.normpath( \
+                    os.path.join(cfg.path.abspath(), relative_path)))
         #enddef
 
         flags[toolset]['includes'] = list(map( \
             make_flags_absolute, \
             flags[toolset]['includes']))
+
+        real_includes = []
+        if include_flags == None:
+            real_includes = flags[toolset]['includes']
+        else:
+            def add_system_flag(path):
+                return include_flags + path
+            #enddef
+
+            flags[toolset]['includes'] = list( \
+                map(add_system_flag, flags[toolset]['include']))
+        #endif
 
         if 'defines' in use[use_flag][toolset]:
             if 'base' in use[use_flag][toolset]['defines']:
@@ -410,6 +433,7 @@ def configure_single_use(cfg, use, use_flag):
                     libpath=lib_paths, \
                     lib=libs, \
                     defines=defines, \
+                    includes=real_includes, \
                     msg='Checking for dynamic library <' + use_flag + '>')
         elif cfg.options.__dict__['with_' + use_flag] == 'static':
             cfg.check_cxx( \
@@ -422,6 +446,7 @@ def configure_single_use(cfg, use, use_flag):
                     stlibpath=lib_paths, \
                     stlib=libs, \
                     defines=defines, \
+                    includes=real_includes, \
                     msg='Checking for static library <' + use_flag + '>')
         #endif
     elif type == 'headers': # header only lib
@@ -433,12 +458,14 @@ def configure_single_use(cfg, use, use_flag):
                 cxxflags=includes + cxx_flags, \
                 cflags=includes + cc_flags, \
                 ldflags=ld_flags, \
+                includes=real_includes, \
                 msg='Checking for header only library <' + use_flag +'>')
     elif type == 'flags':
         print('Adding extra flags for <' + use_flag + '>')
         cfg.env['CFLAGS_' + use_flag] = cc_flags + includes
         cfg.env['CXXFLAGS_' + use_flag] = cxx_flags + includes
         cfg.env['LDFLAGS_' + use_flag] = ld_flags
+        cfg.env['INCLUDES_' + use_flag] = real_includes
     #endif
 
 # Standard waf configuration function, called when configure is passed
@@ -451,7 +478,7 @@ def configure(cfg):
     cfg.env.cur_toolset = cfg.options.toolset
 
     config = get_config(cfg)
-    toolset = get_toolset(config, cfg)
+    toolset = get_toolset(cfg)
 
     # Cache configuration flags so they can't be overriden at build (2)
     config_found = False
@@ -544,7 +571,7 @@ def project(self, project_file):
     #endif
 
     config = get_config(self)
-    toolset = get_toolset(config, self)
+    toolset = get_toolset(self)
 
     # Load the project file and store it in a dictionary
     project = []
