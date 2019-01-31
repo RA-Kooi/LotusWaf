@@ -240,12 +240,18 @@ def configure_single_use(cfg, use, use_flag):
         flags[toolset].setdefault('libs', [])
     #endfor
 
+    ld_flags = flags[cfg.env.cur_toolset]['ld_flags'] \
+            if flags[cfg.env.cur_toolset]['ld_flags'] != [] \
+            else flags['common']['ld_flags']
+
     for toolset in ['common', cfg.env.cur_toolset]:
+        flags[toolset]['real_includes'] = []
+
         if not toolset in use[use_flag]:
             continue
         #endif
 
-        if type != 'flags' and 'code' in use[use_flag][toolset]:
+        if type != 'flags':
             file = os.path.normcase(os.path.normpath(os.path.join('UseFlags', \
                 use[use_flag][toolset]['code'])))
             with open(file, encoding='utf-8') as source_file:
@@ -281,16 +287,19 @@ def configure_single_use(cfg, use, use_flag):
             make_flags_absolute, \
             flags[toolset]['includes']))
 
-        real_includes = []
         if include_flags == None:
-            real_includes = flags[toolset]['includes']
+            flags[toolset]['real_includes'] = flags[toolset]['includes']
         else:
             def add_system_flag(path):
-                return include_flags + path
+                return include_flags + [path]
             #enddef
 
             flags[toolset]['includes'] = list( \
-                map(add_system_flag, flags[toolset]['include']))
+                map(add_system_flag, flags[toolset]['includes']))
+
+            flatten = lambda l: [item for sublist in l for item in sublist]
+
+            flags[toolset]['includes'] = flatten(flags[toolset]['includes'])
         #endif
 
         if 'defines' in use[use_flag][toolset]:
@@ -327,7 +336,7 @@ def configure_single_use(cfg, use, use_flag):
 
         if 'cc_flags_' + cfg.env.cur_conf in use[use_flag][toolset]:
             flags[toolset]['cc_flags'] += \
-                    use[use_flag][toolset]['cc_flags_' + cfg.env.cur_conf]
+                use[use_flag][toolset]['cc_flags_' + cfg.env.cur_conf]
         #endif
 
         if 'cxx_flags' in use[use_flag][toolset]:
@@ -411,9 +420,6 @@ def configure_single_use(cfg, use, use_flag):
     cxx_flags = flags[cfg.env.cur_toolset]['cxx_flags'] \
             if flags[cfg.env.cur_toolset]['cxx_flags'] != [] \
             else flags['common']['cxx_flags']
-    ld_flags = flags[cfg.env.cur_toolset]['ld_flags'] \
-            if flags[cfg.env.cur_toolset]['ld_flags'] != [] \
-            else flags['common']['ld_flags']
     lib_paths = flags[cfg.env.cur_toolset]['lib_paths'] \
             if flags[cfg.env.cur_toolset]['lib_paths'] != [] \
             else flags['common']['lib_paths']
@@ -425,7 +431,7 @@ def configure_single_use(cfg, use, use_flag):
         if cfg.options.__dict__['with_' + use_flag] == 'dynamic':
             cfg.check_cxx( \
                     fragment=source, \
-                    use=use_flag, \
+                    use=[use_flag] + ['EXE'], \
                     uselib_store=use_flag, \
                     cxxflags=includes + cxx_flags, \
                     cflags=includes + cc_flags, \
@@ -433,12 +439,12 @@ def configure_single_use(cfg, use, use_flag):
                     libpath=lib_paths, \
                     lib=libs, \
                     defines=defines, \
-                    includes=real_includes, \
+                    includes=flags[cfg.env.cur_toolset]['real_includes'], \
                     msg='Checking for dynamic library <' + use_flag + '>')
         elif cfg.options.__dict__['with_' + use_flag] == 'static':
             cfg.check_cxx( \
                     fragment=source, \
-                    use=use_flag, \
+                    use=[use_flag] + ['EXE'], \
                     uselib_store=use_flag, \
                     cxxflags=includes + cxx_flags, \
                     cflags=includes + cc_flags, \
@@ -446,26 +452,26 @@ def configure_single_use(cfg, use, use_flag):
                     stlibpath=lib_paths, \
                     stlib=libs, \
                     defines=defines, \
-                    includes=real_includes, \
+                    includes=flags[cfg.env.cur_toolset]['real_includes'], \
                     msg='Checking for static library <' + use_flag + '>')
         #endif
     elif type == 'headers': # header only lib
         cfg.check_cxx( \
                 fragment=source, \
-                use=use_flag, \
+                use=[use_flag] + ['EXE'], \
                 uselib_store=use_flag, \
                 defines=defines, \
                 cxxflags=includes + cxx_flags, \
                 cflags=includes + cc_flags, \
                 ldflags=ld_flags, \
-                includes=real_includes, \
+                includes=flags[cfg.env.cur_toolset]['real_includes'], \
                 msg='Checking for header only library <' + use_flag +'>')
     elif type == 'flags':
         print('Adding extra flags for <' + use_flag + '>')
         cfg.env['CFLAGS_' + use_flag] = cc_flags + includes
         cfg.env['CXXFLAGS_' + use_flag] = cxx_flags + includes
         cfg.env['LDFLAGS_' + use_flag] = ld_flags
-        cfg.env['INCLUDES_' + use_flag] = real_includes
+        cfg.env['INCLUDES_' + use_flag] = flags[cfg.env.cur_toolset]['real_includes']
     #endif
 
 # Standard waf configuration function, called when configure is passed
@@ -509,14 +515,15 @@ def configure(cfg):
 
     cfg.env.cur_platform = cfg.options.target_platform
 
-    # Set the compiler paths so waf can find them
-    cfg.env.CC = toolset['cc_path']
-    cfg.env.CXX = toolset['cxx_path']
+    ignore_paths = False
+    if 'ignore_paths' in toolset:
+        ignore_paths = toolset['ignore_paths']
+    #endif
 
-    # Workaround for windows
-    if sys.platform == 'win32':
-        cfg.env.CC = cfg.env.CC + '.exe'
-        cfg.env.CXX = cfg.env.CXX + '.exe'
+    ## Set the compiler paths so waf can find them
+    if not ignore_paths:
+        cfg.env.CC = toolset['cc_path']
+        cfg.env.CXX = toolset['cxx_path']
     #endif
 
     cfg.load(toolset['cc'])
@@ -524,20 +531,64 @@ def configure(cfg):
     cfg.load('clang_compilation_database')
 
     # Parse compiler flags, defines and system includes
-    cfg.env.CFLAGS += toolset['cc_flags'] + toolset['cc_flags_' + cfg.options.config]
-    cfg.env.CXXFLAGS += toolset['cxx_flags'] + toolset['cxx_flags_' + cfg.options.config]
-    cfg.env.DEFINES += toolset['defines']['base'] + toolset['defines'][cfg.options.config]
+    cfg.env.CFLAGS += toolset['cc_flags']
+    if 'cc_flags_' + cfg.options.config in toolset:
+        cfg.env.CFLAGS += toolset['cc_flags_' + cfg.options.config]
+    #endif
+
+    cfg.env.CXXFLAGS += toolset['cxx_flags']
+    if 'cxx_flags_' + cfg.options.config in toolset:
+        cfg.env.CXXFLAGS += toolset['cxx_flags_' + cfg.options.config]
+    #endif
+
+    cfg.env.DEFINES += toolset['defines']['base']
+    if cfg.options.config in toolset['defines']:
+        cfg.env.DEFINES += toolset['defines'][cfg.options.config]
+    #endif
+
+    system_include_flags = None
+    if 'system_include_flags' in toolset:
+        system_include_flags = toolset['system_include_flags']
+
+        if system_include_flags == '':
+            system_include_flags = None
+        #endif
+    #endif
+
     for path in toolset['system_includes']:
-        flag = '-isystem' + os.path.normcase(os.path.normpath(os.path.join( \
+        if system_include_flags == None:
+            cfg.env.INCLUDES += os.path.normcase(os.path.normpath(os.path.join( \
             cfg.path.abspath(), path)))
-        cfg.env.CFLAGS += [flag]
-        cfg.env.CXXFLAGS += [flag]
+        else:
+            flag = include_flags + [os.path.normcase(os.path.normpath(os.path.join( \
+                cfg.path.abspath(), path)))]
+            cfg.env.CFLAGS += flag
+            cfg.env.CXXFLAGS += flag
+        #endif
     #endfor
 
     # Parse linker flags and static lib flags
-    cfg.env.ARFLAGS = toolset['stlib_flags'] + toolset['stlib_flags_' + \
-        cfg.options.config]
-    cfg.env.LDFLAGS = toolset['ld_flags'] + toolset['ld_flags_' + cfg.options.config]
+    cfg.env.ARFLAGS = toolset['stlib_flags']
+    if 'stlib_flags_' + cfg.options.config in toolset:
+        cfg.env.ARFLAGS += toolset['stlib_flags_' + cfg.options.config]
+    #endif
+
+    cfg.env.LINKFLAGS_cshlib = toolset['shlib_flags']
+    cfg.env.LINKFLAGS_cxxshlib = toolset['shlib_flags']
+    if 'shlib_flags_' + cfg.options.config in toolset:
+        cfg.env.LINKFLAGS_cshlib += toolset['shlib_flags_' + cfg.options.config]
+        cfg.env.LINKFLAGS_cxxshlib += toolset['shlib_flags_' + cfg.options.config]
+    #endif
+
+    cfg.env.LINKFLAGS_EXE = toolset['exe_flags']
+    if 'exe_flags_' + cfg.options.config in toolset:
+        cfg.env.LINKFLAGS_EXE += toolset['exe_flags_' + cfg.options.config]
+    #endif
+
+    cfg.env.LDFLAGS = toolset['ld_flags']
+    if 'ld_flags_' + cfg.options.config in toolset:
+        cfg.env.LDFLAGS += toolset['ld_flags_' + cfg.options.config]
+    #endif
 
     # Configure use flags
     configure_use(cfg)
@@ -682,6 +733,8 @@ def project(self, project_file):
             if 'stlib_path' in project[self.env.cur_platform]:
                 stlib_path += project[self.env.cur_platform]['stlib_path']
             #endif
+        #endif
+    #endif
 
     export_includes = []
     if 'export_includes' in project:
@@ -730,7 +783,7 @@ def project(self, project_file):
         self.program(name=project['name'], source=project['sources'], target=target, \
             vnum=version, defines=defines + self.env.project_build_defs, includes=includes, \
             lib=lib, libpath=lib_path, stlib=stlib, stlibpath=stlib_path, \
-            rpath=project['rpath'], use=use, uselib=uselib, features=feature, \
+            rpath=project['rpath'], use=use + ['EXE'], uselib=uselib, features=feature, \
             export_includes=export_includes)
     #endif
 
