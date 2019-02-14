@@ -238,6 +238,7 @@ def configure_single_use(cfg, use, use_flag):
         flags[toolset].setdefault('ld_flags', [])
         flags[toolset].setdefault('lib_paths', [])
         flags[toolset].setdefault('libs', [])
+        flags[toolset].setdefault('use', [])
     #endfor
 
     ld_flags = flags[cfg.env.cur_toolset]['ld_flags'] \
@@ -357,6 +358,10 @@ def configure_single_use(cfg, use, use_flag):
                     use[use_flag][toolset]['ld_flags_' + cfg.env.cur_conf]
         #endif
 
+        if 'use' in use[use_flag][toolset]:
+            flags[toolset]['use'] += use[use_flag][toolset]['use']
+        #endif
+
         # This should probably be made more readable somehow,
         # but idk how to check for the options without horrible hacks
         if type == 'lib':
@@ -433,12 +438,13 @@ def configure_single_use(cfg, use, use_flag):
     libs = flags[cfg.env.cur_toolset]['libs'] \
             if flags[cfg.env.cur_toolset]['libs'] != [] \
             else flags['common']['libs']
+    use = flags[cfg.env.cur_toolset]['use'] + flags['common']['use']
 
     if type == 'lib':
         if cfg.options.__dict__['with_' + use_flag] == 'dynamic':
             cfg.check_cxx( \
                     fragment=source, \
-                    use=[use_flag] + ['EXE'], \
+                    use=use + [use_flag] + ['EXE'], \
                     uselib_store=use_flag, \
                     cxxflags=includes + cxx_flags, \
                     cflags=includes + cc_flags, \
@@ -451,7 +457,7 @@ def configure_single_use(cfg, use, use_flag):
         elif cfg.options.__dict__['with_' + use_flag] == 'static':
             cfg.check_cxx( \
                     fragment=source, \
-                    use=[use_flag] + ['EXE'], \
+                    use=use + [use_flag] + ['EXE'], \
                     uselib_store=use_flag, \
                     cxxflags=includes + cxx_flags, \
                     cflags=includes + cc_flags, \
@@ -465,7 +471,7 @@ def configure_single_use(cfg, use, use_flag):
     elif type == 'headers': # header only lib
         cfg.check_cxx( \
                 fragment=source, \
-                use=[use_flag] + ['EXE'], \
+                use=use + [use_flag] + ['EXE'], \
                 uselib_store=use_flag, \
                 defines=defines, \
                 cxxflags=includes + cxx_flags, \
