@@ -560,7 +560,7 @@ def configure(cfg):
             cfg.env.INCLUDES += os.path.normcase(os.path.normpath(os.path.join( \
             cfg.path.abspath(), path)))
         else:
-            flag = include_flags + [os.path.normcase(os.path.normpath(os.path.join( \
+            flag = system_include_flags + [os.path.normcase(os.path.normpath(os.path.join( \
                 cfg.path.abspath(), path)))]
             cfg.env.CFLAGS += flag
             cfg.env.CXXFLAGS += flag
