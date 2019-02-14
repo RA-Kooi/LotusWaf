@@ -5,7 +5,9 @@
 	"cxx":"clang++",
 	"cxx_path":"clang++",
 
-    "system_include_flags":["-isystem"],
+	"ar_path":"ar",
+
+	"system_include_flags":["-isystem"],
 	"system_includes":[],
 
 	"defines":

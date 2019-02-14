@@ -524,6 +524,7 @@ def configure(cfg):
     if not ignore_paths:
         cfg.env.CC = toolset['cc_path']
         cfg.env.CXX = toolset['cxx_path']
+        cfg.env.AR = toolset['ar_path']
     #endif
 
     cfg.load(toolset['cc'])
