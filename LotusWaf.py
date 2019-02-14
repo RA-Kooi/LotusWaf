@@ -574,11 +574,21 @@ def configure(cfg):
         cfg.env.ARFLAGS += toolset['stlib_flags_' + cfg.options.config]
     #endif
 
+    cfg.env.STLIBPATH = toolset['stlib_path']
+    if 'stlib_path_' + cfg.options.config in toolset:
+        cfg.env.STLIBPATH += toolset['stlib_path_' + cfg.options.config]
+    #endif
+
     cfg.env.LINKFLAGS_cshlib = toolset['shlib_flags']
     cfg.env.LINKFLAGS_cxxshlib = toolset['shlib_flags']
     if 'shlib_flags_' + cfg.options.config in toolset:
         cfg.env.LINKFLAGS_cshlib += toolset['shlib_flags_' + cfg.options.config]
         cfg.env.LINKFLAGS_cxxshlib += toolset['shlib_flags_' + cfg.options.config]
+    #endif
+
+    cfg.env.LIBPATH = toolset['shlib_path']
+    if 'shlib_path_' + cfg.options.config in toolset:
+        cfg.env.LIBPATH += toolset['shlib_path_' + cfg.options.config]
     #endif
 
     cfg.env.LINKFLAGS_EXE = toolset['exe_flags']
