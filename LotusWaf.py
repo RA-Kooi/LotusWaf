@@ -76,9 +76,9 @@ def load_use_options(opt):
 
         if use[use_flag]['type'] != 'headers':
             group.add_option('--with-' + use_flag, action='store', \
-                dest='with_' + use_flag, default='dynamic', help='Links to the ' + \
+                dest='with_' + use_flag, default=None, help='Links to the ' + \
                 'static or dynamic version of ' + use_flag + '. Valid inputs are ' + \
-                '[dynamic, static] [default:dynamic]')
+                '[dynamic, static] [default: defined in use flag file (usually dynamic)]')
         #endif
 
         group.add_option('--' + use_flag + '-includes', action='append', \
@@ -361,8 +361,13 @@ def configure_single_use(cfg, use, use_flag):
         # but idk how to check for the options without horrible hacks
         if type == 'lib':
             # we either have a dynamic or static lib
+            default_shared = False
+            if 'shared' in use[use_flag][toolset]:
+                default_shared = use[use_flag][toolset]
 
-            if cfg.options.__dict__['with_' + use_flag] == 'dynamic':
+            if cfg.options.__dict__['with_' + use_flag] == 'dynamic' or not default_shared:
+                cfg.options.__dict__['with_' + use_flag] = 'dynamic'
+
                 if cfg.options.__dict__[use_flag + '_libpath'] != None:
                     flags[toolset]['lib_paths'] = cfg.options.__dict__[use_flag + '_libpath']
                 # No command line option passed
@@ -378,7 +383,9 @@ def configure_single_use(cfg, use, use_flag):
                 elif 'shlib_link' in use[use_flag][toolset]:
                     flags[toolset]['libs'] = use[use_flag][toolset]['shlib_link']
                 #endif
-            elif cfg.options.__dict__['with_' + use_flag] == 'static':
+            elif cfg.options.__dict__['with_' + use_flag] == 'static' or default_shared:
+                cfg.options.__dict__['with_' + use_flag] = 'static'
+
                 if cfg.options.__dict__[use_flag + '_stlibpath'] != None:
                     flags[toolset]['lib_paths'] = \
                             cfg.options.__dict__[use_flag + '_stlibpath']
