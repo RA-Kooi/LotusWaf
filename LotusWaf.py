@@ -202,6 +202,7 @@ def configure_single_use(cfg, use, use_flag):
         type = use[use_flag]['type']
     #endif
 
+    optional = False
     optional_toolset = cfg.env.cur_toolset
     if not optional_toolset in use[use_flag] \
             or not 'optional' in use[use_flag][optional_toolset]:
@@ -217,8 +218,8 @@ def configure_single_use(cfg, use, use_flag):
                         '> to be present if the type is not "flags".')
     #endif
 
-    if type != 'flags' and \
-            use[use_flag][optional_toolset]['optional'] == True:
+    if type != 'flags' and use[use_flag][optional_toolset]['optional'] == True:
+        optional = True
         if cfg.options.__dict__['without_' + use_flag] == True:
             print('[' + use_flag + '] Disabled, skipping...')
             return
@@ -458,7 +459,8 @@ def configure_single_use(cfg, use, use_flag):
                     lib=libs, \
                     defines=defines, \
                     includes=flags[cfg.env.cur_toolset]['real_includes'], \
-                    msg='Checking for dynamic library <' + use_flag + '>')
+                    msg='Checking for dynamic library <' + use_flag + '>', \
+                    mandatory=not optional)
         elif cfg.options.__dict__['with_' + use_flag] == 'static':
             cfg.check_cxx( \
                     fragment=source, \
@@ -471,7 +473,8 @@ def configure_single_use(cfg, use, use_flag):
                     stlib=libs, \
                     defines=defines, \
                     includes=flags[cfg.env.cur_toolset]['real_includes'], \
-                    msg='Checking for static library <' + use_flag + '>')
+                    msg='Checking for static library <' + use_flag + '>', \
+                    mandatory=not optional)
         #endif
     elif type == 'headers': # header only lib
         cfg.check_cxx( \
@@ -483,7 +486,8 @@ def configure_single_use(cfg, use, use_flag):
                 cflags=includes + cc_flags, \
                 ldflags=ld_flags, \
                 includes=flags[cfg.env.cur_toolset]['real_includes'], \
-                msg='Checking for header only library <' + use_flag +'>')
+                msg='Checking for header only library <' + use_flag +'>', \
+                mandatory=not optional)
     elif type == 'flags':
         print('Adding extra flags for <' + use_flag + '>')
         cfg.env['CFLAGS_' + use_flag] = cc_flags + includes
