@@ -366,11 +366,16 @@ def configure_single_use(cfg, use, use_flag):
         # but idk how to check for the options without horrible hacks
         if type == 'lib':
             # we either have a dynamic or static lib
-            default_shared = False
+            default_shared = True
             if 'shared' in use[use_flag][toolset]:
-                default_shared = use[use_flag][toolset]
+                default_shared = use[use_flag][toolset]['shared']
 
-            if cfg.options.__dict__['with_' + use_flag] == 'dynamic' or not default_shared:
+            if cfg.options.__dict__['with_' + use_flag] == 'dynamic':
+                default_shared = True
+            elif cfg.options.__dict__['with_' + use_flag] == 'static':
+                default_shared = False
+
+            if default_shared:
                 cfg.options.__dict__['with_' + use_flag] = 'dynamic'
 
                 if cfg.options.__dict__[use_flag + '_libpath'] != None:
@@ -388,7 +393,7 @@ def configure_single_use(cfg, use, use_flag):
                 elif 'shlib_link' in use[use_flag][toolset]:
                     flags[toolset]['libs'] = use[use_flag][toolset]['shlib_link']
                 #endif
-            elif cfg.options.__dict__['with_' + use_flag] == 'static' or default_shared:
+            else:
                 cfg.options.__dict__['with_' + use_flag] = 'static'
 
                 if cfg.options.__dict__[use_flag + '_stlibpath'] != None:
