@@ -197,9 +197,18 @@ def configure_single_use(cfg, use, use_flag):
 
     type = str()
     if not 'type' in use[use_flag]:
-        cfg.fatal('Use flag type is required!')
+        cfg.fatal(use_flag + ': Use flag type is required!')
     else:
         type = use[use_flag]['type']
+    #endif
+
+    if not 'platforms' in use[use_flag]:
+        cfg.fatal(use_flag + ': Platforms are required!')
+    #endif
+
+    if not cfg.options.target_platform in use[use_flag]['platforms']:
+        print(cfg.options.target_platform + ' not in use[' + use_flag + '][\'platforms\']')
+        return
     #endif
 
     optional = False
