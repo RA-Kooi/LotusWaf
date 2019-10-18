@@ -51,7 +51,7 @@ def load_configuration_options(config, opt):
             ', unable to print toolset help.')
 
 # Show use specific help output when waf --help is executed
-def load_use_options(opt):
+def load_use_options(config, opt):
     from optparse import OptionGroup
     use = get_use(opt)
 
@@ -62,17 +62,20 @@ def load_use_options(opt):
             continue
         #endif
 
-        for platform in use[use_flag]:
-            optional_platform = platform
-            if not 'optional' in use[use_flag][platform]:
-                optional_platform = 'common'
-            #endif
+        if not 'common' in use[use_flag]:
+            opt.fatal('Missing common block in use[' + use_flag + '].')
+        #endif
 
-            if use[use_flag][optional_platform]['optional'] == True:
-                group.add_option('--without-' + use_flag, action='store_true', \
-                    dest='without_' + use_flag, default=False, help='Stops ' + \
-                    use_flag + ' from being included in any project.')
-            #endif
+        if not 'optional' in use[use_flag]['common']:
+            opt.fatal('Missing optional in use[' + use_flag + '][\'common\'].')
+        #endif
+
+        if use[use_flag]['common']['optional'] == True:
+            group.add_option('--without-' + use_flag, action='store_true', \
+                dest='without_' + use_flag, default=False, help='Stops ' + \
+                use_flag + ' from being included in any project.' + \
+                ' This may be overridden by the target platform.')
+        #endif
 
         if use[use_flag]['type'] != 'headers':
             group.add_option('--with-' + use_flag, action='store', \
@@ -179,7 +182,7 @@ def options(opt):
     config = get_config(opt)
 
     load_configuration_options(config, opt)
-    load_use_options(opt)
+    load_use_options(config, opt)
 
 # Parse the use flags file and command line options
 def configure_use(cfg):
@@ -206,28 +209,32 @@ def configure_single_use(cfg, use, use_flag):
         cfg.fatal(use_flag + ': Platforms are required!')
     #endif
 
+    if not 'common' in use[use_flag]:
+        cfg.fatal(use_flag + ': A common block is required!')
+    #endif
+
+    if type != 'flags' and not 'optional' in use[use_flag]['common']:
+        cfg.fatal(use_flag + ': An "optional" directive is required in a common' + \
+            ' block, where the type is not "flags"!')
+    #endif
+
+    if type != 'flags' and not 'code' in use[use_flag]['common']:
+        cfg.fatal(use_flag + ': A "code" directive is required in a common' + \
+            ' block, where the type is not "flags"!')
+    #endif
+
     if not cfg.options.target_platform in use[use_flag]['platforms']:
-        print(cfg.options.target_platform + ' not in use[' + use_flag + '][\'platforms\']')
         return
     #endif
 
     optional = False
-    optional_toolset = cfg.env.cur_toolset
-    if not optional_toolset in use[use_flag] \
-            or not 'optional' in use[use_flag][optional_toolset]:
-        optional_toolset = 'common'
+    optional_platform = cfg.env.cur_toolset
+    if not optional_platform in use[use_flag] \
+            or not 'optional' in use[use_flag][optional_platform]:
+        optional_platform = 'common'
     #endif
 
-    if type != 'flags' and not optional_toolset in use[use_flag]:
-        cfg.fatal('Use flag <' + use_flag + '> must at least have a common block or' + \
-                ' implement all available toolsets.')
-
-    if type != 'flags' and not 'optional' in use[use_flag][optional_toolset]:
-                cfg.fatal('The "optional" parameter is required for <' + use_flag + \
-                        '> to be present if the type is not "flags".')
-    #endif
-
-    if type != 'flags' and use[use_flag][optional_toolset]['optional'] == True:
+    if type != 'flags' and use[use_flag][optional_platform]['optional'] == True:
         optional = True
         if cfg.options.__dict__['without_' + use_flag] == True:
             print('[' + use_flag + '] Disabled, skipping...')
@@ -240,6 +247,7 @@ def configure_single_use(cfg, use, use_flag):
     flags = dict()
     flags.setdefault('common', dict())
     flags.setdefault(cfg.env.cur_toolset, dict())
+    flags.setdefault(cfg.env.cur_platform, dict())
     for toolset in flags:
         flags[toolset].setdefault('defines', [])
         flags[toolset].setdefault('includes', [])
@@ -249,25 +257,40 @@ def configure_single_use(cfg, use, use_flag):
         flags[toolset].setdefault('lib_paths', [])
         flags[toolset].setdefault('libs', [])
         flags[toolset].setdefault('use', [])
+        flags[toolset].setdefault('real_includes', [])
     #endfor
 
-    ld_flags = flags[cfg.env.cur_toolset]['ld_flags'] \
-            if flags[cfg.env.cur_toolset]['ld_flags'] != [] \
-            else flags['common']['ld_flags']
+    if type != 'flags':
+        file = os.path.normcase(os.path.normpath(os.path.join('UseFlags', \
+            use[use_flag]['common']['code'])))
+        with open(file, encoding='utf-8') as source_file:
+            source = source_file.read();
+        #endwith
+    #endif
 
-    for toolset in ['common', cfg.env.cur_toolset]:
-        flags[toolset]['real_includes'] = []
-
+    for toolset in [cfg.env.cur_platform, cfg.env.cur_toolset, 'common']:
         if not toolset in use[use_flag]:
             continue
         #endif
 
-        if type != 'flags':
-            file = os.path.normcase(os.path.normpath(os.path.join('UseFlags', \
-                use[use_flag][toolset]['code'])))
-            with open(file, encoding='utf-8') as source_file:
-                source = source_file.read();
-            #endwith
+        if toolset is 'common':
+            skip_common = False
+
+            if cfg.env.cur_platform in use[use_flag]:
+                if 'no_common' in use[use_flag][cfg.env.cur_platform]:
+                    skip_common = use[use_flag][cfg.env.cur_platform]['no_common']
+                #endif
+            #endif
+
+            if cfg.env.cur_toolset in use[use_flag]:
+                if 'no_common' in use[use_flag][cfg.env.cur_toolset]:
+                    skip_common = use[use_flag][cfg.env.cur_toolset]['no_common']
+                #endif
+            #endif
+
+            if skip_common:
+                continue
+            #endif
         #endif
 
         if type != 'flags' \
@@ -320,7 +343,7 @@ def configure_single_use(cfg, use, use_flag):
 
             if cfg.env.cur_conf in use[use_flag][toolset]['defines']:
                 flags[toolset]['defines'] += \
-                        use[use_flag][toolset]['defines'][cfg.env.cur_conf]
+                    use[use_flag][toolset]['defines'][cfg.env.cur_conf]
             #endif
 
             if 'stlib' in use[use_flag][toolset]['defines']:
@@ -329,7 +352,7 @@ def configure_single_use(cfg, use, use_flag):
 
             if 'stlib_' + cfg.env.cur_conf in use[use_flag][toolset]['defines']:
                 flags[toolset]['defines'] += \
-                        use[use_flag][toolset]['defines']['stlib_' + cfg.env.cur_conf]
+                    use[use_flag][toolset]['defines']['stlib_' + cfg.env.cur_conf]
             #endif
 
             if 'shlib' in use[use_flag][toolset]['defines']:
@@ -338,8 +361,9 @@ def configure_single_use(cfg, use, use_flag):
 
             if 'shlib_' + cfg.env.cur_conf in use[use_flag][toolset]['defines']:
                 flags[toolset]['defines'] += \
-                        use[use_flag][toolset]['defines']['shlib_' + cfg.env.cur_conf]
+                    use[use_flag][toolset]['defines']['shlib_' + cfg.env.cur_conf]
             #endif
+        #endif
 
         if 'cc_flags' in use[use_flag][toolset]:
             flags[toolset]['cc_flags'] += use[use_flag][toolset]['cc_flags']
@@ -393,12 +417,10 @@ def configure_single_use(cfg, use, use_flag):
                 # No command line option passed
                 elif 'shlib_path' in use[use_flag][toolset]:
                     flags[toolset]['lib_paths'] = use[use_flag][toolset]['shlib_path']
-                elif 'shlib_path' in use[use_flag]['common']:
-                    flags[toolset]['lib_paths'] = use[use_flag]['common']['shlib_path']
                 #endif
 
                 if cfg.options.__dict__[use_flag + '_lib'] != None:
-                    flags[toolset]['libs'] = cfg.options.__dict__[use_flag + '_lib']
+                    flags[toolset]['libs'] = [cfg.options.__dict__[use_flag + '_lib']]
                 # No command line option passed
                 elif 'shlib_link' in use[use_flag][toolset]:
                     flags[toolset]['libs'] = use[use_flag][toolset]['shlib_link']
@@ -415,7 +437,7 @@ def configure_single_use(cfg, use, use_flag):
                 #endif
 
                 if cfg.options.__dict__[use_flag + '_lib'] != None:
-                    flags[toolset]['libs'] = cfg.options.__dict__[use_flag + '_lib']
+                    flags[toolset]['libs'] = [cfg.options.__dict__[use_flag + '_lib']]
                 # No command line option passed
                 elif 'stlib_link' in use[use_flag][toolset]:
                     flags[toolset]['libs'] = use[use_flag][toolset]['stlib_link']
@@ -435,68 +457,104 @@ def configure_single_use(cfg, use, use_flag):
         cfg.fatal('Source of test file for <' + use_flag + '> is empty.')
     #endif
 
-    defines = flags[cfg.env.cur_toolset]['defines'] \
-            if flags[cfg.env.cur_toolset]['defines'] != [] \
-            else flags['common']['defines']
-    includes = flags[cfg.env.cur_toolset]['includes'] \
-            if flags[cfg.env.cur_toolset]['includes'] != [] \
-            else flags['common']['includes']
-    cc_flags = flags[cfg.env.cur_toolset]['cc_flags'] \
-            if flags[cfg.env.cur_toolset]['cc_flags'] != [] \
-            else flags['common']['cc_flags']
-    cxx_flags = flags[cfg.env.cur_toolset]['cxx_flags'] \
-            if flags[cfg.env.cur_toolset]['cxx_flags'] != [] \
-            else flags['common']['cxx_flags']
-    lib_paths = flags[cfg.env.cur_toolset]['lib_paths'] \
-            if flags[cfg.env.cur_toolset]['lib_paths'] != [] \
-            else flags['common']['lib_paths']
-    libs = flags[cfg.env.cur_toolset]['libs'] \
-            if flags[cfg.env.cur_toolset]['libs'] != [] \
-            else flags['common']['libs']
-    use = flags[cfg.env.cur_toolset]['use'] + flags['common']['use']
+    # These flags are additive
+    defines = flags[cfg.env.cur_toolset]['defines'] + \
+        flags[cfg.env.cur_platform]['defines'] + \
+        flags['common']['defines']
+
+    includes = flags[cfg.env.cur_toolset]['includes'] + \
+        flags[cfg.env.cur_platform]['includes'] + \
+        flags['common']['includes']
+
+    cc_flags = flags[cfg.env.cur_toolset]['cc_flags'] + \
+        flags[cfg.env.cur_platform]['cc_flags'] + \
+        flags['common']['cc_flags']
+
+    cxx_flags = flags[cfg.env.cur_toolset]['cxx_flags'] + \
+        flags[cfg.env.cur_platform]['cxx_flags'] + \
+        flags['common']['cxx_flags']
+
+    use = flags[cfg.env.cur_toolset]['use'] + \
+        flags[cfg.env.cur_platform]['use'] + \
+        flags['common']['use']
+
+    # Linking related flags however are not
+    ld_flags = []
+
+    if flags[cfg.env.cur_toolset]['ld_flags'] != []:
+        ld_flags = flags[cfg.env.cur_toolset]['ld_flags']
+    elif flags[cfg.env.cur_platform]['ld_flags'] != []:
+        ld_flags = flags[cfg.env.cur_platform]['ld_flags']
+    else:
+        ld_flags = flags['common']['ld_flags']
+
+    lib_paths = []
+
+    if flags[cfg.env.cur_toolset]['lib_paths'] != []:
+        lib_paths = flags[cfg.env.cur_toolset]['lib_paths']
+    elif flags[cfg.env.cur_platform]['lib_paths'] != []:
+        lib_paths = flags[cfg.env.cur_platform]['lib_paths']
+    else:
+        lib_paths = flags['common']['lib_paths']
+
+    libs = []
+
+    if flags[cfg.env.cur_toolset]['libs'] != []:
+        libs = flags[cfg.env.cur_toolset]['libs']
+    elif flags[cfg.env.cur_platform]['libs'] != []:
+        libs = flags[cfg.env.cur_platform]['libs']
+    else:
+        libs = flags['common']['libs']
+
+    # remove duplicates from the list
+    for toolset in flags:
+        for sublist in flags[toolset]:
+            flags[toolset][sublist] = list(dict.fromkeys(flags[toolset][sublist]))
+        #endfor
+    #endfor
 
     if type == 'lib':
         if cfg.options.__dict__['with_' + use_flag] == 'dynamic':
             cfg.check_cxx( \
-                    fragment=source, \
-                    use=use + [use_flag] + ['EXE'], \
-                    uselib_store=use_flag, \
-                    cxxflags=includes + cxx_flags, \
-                    cflags=includes + cc_flags, \
-                    ldflags=ld_flags, \
-                    libpath=lib_paths, \
-                    lib=libs, \
-                    defines=defines, \
-                    includes=flags[cfg.env.cur_toolset]['real_includes'], \
-                    msg='Checking for dynamic library <' + use_flag + '>', \
-                    mandatory=not optional)
-        elif cfg.options.__dict__['with_' + use_flag] == 'static':
-            cfg.check_cxx( \
-                    fragment=source, \
-                    use=use + [use_flag] + ['EXE'], \
-                    uselib_store=use_flag, \
-                    cxxflags=includes + cxx_flags, \
-                    cflags=includes + cc_flags, \
-                    ldflags=ld_flags, \
-                    stlibpath=lib_paths, \
-                    stlib=libs, \
-                    defines=defines, \
-                    includes=flags[cfg.env.cur_toolset]['real_includes'], \
-                    msg='Checking for static library <' + use_flag + '>', \
-                    mandatory=not optional)
-        #endif
-    elif type == 'headers': # header only lib
-        cfg.check_cxx( \
                 fragment=source, \
                 use=use + [use_flag] + ['EXE'], \
                 uselib_store=use_flag, \
-                defines=defines, \
                 cxxflags=includes + cxx_flags, \
                 cflags=includes + cc_flags, \
                 ldflags=ld_flags, \
+                libpath=lib_paths, \
+                lib=libs, \
+                defines=defines, \
                 includes=flags[cfg.env.cur_toolset]['real_includes'], \
-                msg='Checking for header only library <' + use_flag +'>', \
+                msg='Checking for dynamic library <' + use_flag + '>', \
                 mandatory=not optional)
+        elif cfg.options.__dict__['with_' + use_flag] == 'static':
+            cfg.check_cxx( \
+                fragment=source, \
+                use=use + [use_flag] + ['EXE'], \
+                uselib_store=use_flag, \
+                cxxflags=includes + cxx_flags, \
+                cflags=includes + cc_flags, \
+                ldflags=ld_flags, \
+                stlibpath=lib_paths, \
+                stlib=libs, \
+                defines=defines, \
+                includes=flags[cfg.env.cur_toolset]['real_includes'], \
+                msg='Checking for static library <' + use_flag + '>', \
+                mandatory=not optional)
+        #endif
+    elif type == 'headers': # header only lib
+        cfg.check_cxx( \
+            fragment=source, \
+            use=use + [use_flag] + ['EXE'], \
+            uselib_store=use_flag, \
+            defines=defines, \
+            cxxflags=includes + cxx_flags, \
+            cflags=includes + cc_flags, \
+            ldflags=ld_flags, \
+            includes=flags[cfg.env.cur_toolset]['real_includes'], \
+            msg='Checking for header only library <' + use_flag +'>', \
+            mandatory=not optional)
     elif type == 'flags':
         print('Adding extra flags for <' + use_flag + '>')
         cfg.env['CFLAGS_' + use_flag] = cc_flags + includes
