@@ -675,6 +675,11 @@ def project(self, project_file):
     #endwith
 
     target = project['target']
+    target = os.path.normpath( \
+        os.path.join( \
+            self.out_dir, \
+            os.path.relpath(self.path.abspath(), self.top_dir), \
+            target))
 
     # Change the path from unix style to windows style if we're running on cmd.exe
     # Other terminals, MSYS2 and the likes, need a unix style path
