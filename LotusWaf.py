@@ -513,6 +513,24 @@ def configure_single_use(cfg, use, use_flag):
         #endfor
     #endfor
 
+    if cfg.env.CC_NAME == 'msvc' or cfg.env.CXX_NAME == 'msvc':
+        for toolset in flags:
+            for cflags in ['cc_flags', 'cxx_flags']:
+                for flag in flags[toolset][cflags]:
+                    if flag[1:].lower() == 'fs':
+                        cfg.fatal(use_flag  + ': Don\'t add the /FS flag, ' +
+                            'this will be handled by LotusWaf!')
+                    #endif
+
+                    if flag[1:3].lower() == 'fd':
+                        cfg.fatal(use_flag + ': Don\'t add the /Fd flag, ' + \
+                            'this will be handled by LotusWaf!')
+                    #endif
+                #endfor
+            #endfor
+        #endfor
+    #endif
+
     if type == 'lib':
         if cfg.options.__dict__['with_' + use_flag] == 'dynamic':
             cfg.check_cxx( \
@@ -656,6 +674,22 @@ def configure(cfg):
             cfg.env.CXXFLAGS += flag
         #endif
     #endfor
+
+    if cfg.env.CC_NAME == 'msvc' or cfg.env.CXX_NAME == 'msvc':
+        for flags in ['CFLAGS', 'CXXFLAGS']:
+            for flag in cfg.env[flags]:
+                if flag[1:].lower() == 'fs':
+                    cfg.fatal('Don\'t add the /FS flag, this will be handled' + \
+                        ' by LotusWaf!')
+                #endif
+
+                if flag[1:3].lower() == 'fd':
+                    cfg.fatal('Don\'t add the /Fd flag, this will be handled' + \
+                        ' by LotusWaf!')
+                #endif
+            #endfor
+        #endfor
+    #endif
 
     # Parse linker flags and static lib flags
     cfg.env.ARFLAGS = toolset['stlib_flags']
@@ -901,3 +935,41 @@ from waflib.TaskGen import feature
 @feature('unity')
 def unity(self):
     pass
+
+from waflib import TaskGen, Tools
+@TaskGen.feature('c', 'cxx')
+@TaskGen.after_method('apply_flags_msvc', 'propagate_uselib_vars')
+def add_pdb_per_object(self):
+    """For msvc, specify a unique compile pdb per object, to work around LNK4099.
+    CFLAGS are updated with a unique /Fd flag based on the target name.
+    This is separate from the link pdb.
+    """
+
+    link_task = getattr(self, 'link_task', None)
+
+    for task in self.compiled_tasks:
+        isCpp = isinstance(task, Tools.cxx.cxx)
+
+        if isCpp:
+            if task.env.CXX_NAME != 'msvc':
+                continue
+            #endif
+        else:
+            if task.env.CC_NAME != 'msvc':
+                continue
+            #endif
+        #endif
+
+        node = task.outputs[0].change_ext('.pdb')
+        pdb_name = node.abspath()
+
+        if isCpp:
+            task.env.append_value('CXXFLAGS', '/Fd:' + pdb_name)
+        else:
+            task.env.append_value('CFLAGS', '/Fd:' + pdb_name)
+        #endif
+
+        if link_task and not node in link_task.dep_nodes:
+            link_task.dep_nodes.append(node)
+        #endif
+    #endfor
