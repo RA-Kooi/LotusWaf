@@ -637,7 +637,9 @@ def configure(cfg):
     cfg.load(toolset['cc'])
     cfg.load(toolset['cxx'])
     cfg.load('clang_compilation_database')
-    cfg.load('msvc_pdb')
+
+    if toolset['cc'] == 'msvc' or toolset['cxx'] == 'msvc':
+        cfg.load('msvc_pdb')
 
     # Parse compiler flags, defines and system includes
     cfg.env.CFLAGS += toolset['cc_flags']
