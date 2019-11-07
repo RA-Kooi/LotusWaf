@@ -4,8 +4,6 @@
 from waflib.Configure import conf, ConfigurationContext
 from waflib.Options import OptionsContext
 
-pre_fun_added = False
-
 # Show general help output when waf --help is executed
 def load_configuration_options(config, opt):
     import platform
@@ -730,10 +728,6 @@ def configure(cfg):
     # Configure use flags
     configure_use(cfg)
 
-# Function that makes sure that defines generated during building don't get duplicated
-def project_types(cfg):
-    cfg.env.project_build_defs = []
-
 # Loads, parses, and builds a project file
 @conf
 def project(self, project_file):
@@ -750,13 +744,6 @@ def project(self, project_file):
             return getattr(Options.options, 'batchsize', unity.MAX_BATCH)
         #endif
     #enddef
-
-    # Add pre build callback
-    global pre_fun_added
-    if pre_fun_added == False:
-        self.add_pre_fun(project_types)
-        pre_fun_added = True
-    #endif
 
     config = get_config(self)
     toolset = get_toolset(self)
@@ -878,9 +865,43 @@ def project(self, project_file):
         #endif
     #endif
 
+    include_flags = None
+    if 'system_include_flags' in toolset:
+        include_flags = toolset['system_include_flags']
+
+        if include_flags == '':
+            include_flags = None
+        #endif
+    #endif
+
+    def make_flags_absolute(relative_path):
+        return os.path.normcase( \
+            os.path.normpath( \
+                os.path.join(self.path.abspath(), relative_path)))
+    #enddef
+
     export_includes = []
+    export_system_includes = []
     if 'export_includes' in project:
-        export_includes += project['export_includes']
+        project['export_includes'] = list(map( \
+            make_flags_absolute,
+            project['export_includes']))
+
+        if include_flags == None:
+            export_includes += project['export_includes']
+        else:
+            def add_system_flag(path):
+                return include_flags + [path]
+            #enddef
+
+            project['export_includes'] = list( \
+                map(add_system_flag, project['export_includes']))
+
+            flatten = lambda l: [item for sublist in l for item in sublist]
+
+            project['export_includes'] = flatten(project['export_includes'])
+            export_system_includes = project['export_includes']
+        #endif
     #endif
 
     # If a project is in unity build mode, we pass the unity feature.
@@ -895,39 +916,70 @@ def project(self, project_file):
         version = ''
     #endif
 
+    task_gen = None
     if project['type'] == 'shlib':
-        self.shlib(name=project['name'], source=project['sources'], target=target, \
-            vnum=version, defines=defines + self.env.project_build_defs, includes=includes,\
-            lib=lib, libpath=lib_path, stlib=stlib, stlibpath=stlib_path, \
-            rpath=project['rpath'], use=use, uselib=uselib, features=feature, \
-            export_includes=export_includes)
-
-        # Add an extra define that can be checked to see if a project is built as a DLL or not.
-        # Needed for dllimport on windows.
-        self.env.project_build_defs = self.env.project_build_defs + \
-                [project['name'].upper() + '_AS_DLL']
-
+        task_gen = self.shlib( \
+            name=project['name'], \
+            source=project['sources'], \
+            target=target, \
+            vnum=version, \
+            defines=defines, \
+            includes=includes,\
+            lib=lib, \
+            libpath=lib_path, \
+            stlib=stlib, \
+            stlibpath=stlib_path, \
+            rpath=project['rpath'], \
+            use=use, \
+            uselib=use + uselib, \
+            features=feature, \
+            export_includes=export_includes, \
+            # Add an extra define that can be checked to see if a project is built as a DLL or not.
+            # Needed for dllimport on windows.
+            export_defines=[project['name'].upper() + '_AS_DLL'])
     elif project['type'] == 'stlib':
-        self.stlib(name=project['name'], source=project['sources'], target=target, \
-            vnum=version, defines=defines + self.env.project_build_defs, includes=includes, \
-            lib=lib, libpath=lib_path, stlib=stlib, stlibpath=stlib_path, \
-            rpath=project['rpath'], use=use, uselib=uselib, features=feature, \
-            export_includes=export_includes)
-
-        # Add an extra define that can be checked to see if a project is built as a
-        # static library or not.
-        # This has been added because of the one above,
-        # if this is for whatever reason ever needed.
-        self.env.project_build_defs = self.env.project_build_defs + \
-                [project['name'].upper() + '_AS_LIB']
-
+        task_gen = self.stlib( \
+            name=project['name'], \
+            source=project['sources'], \
+            target=target, \
+            vnum=version, \
+            defines=defines, \
+            includes=includes, \
+            lib=lib, \
+            libpath=lib_path, \
+            stlib=stlib, \
+            stlibpath=stlib_path, \
+            rpath=project['rpath'], \
+            use=use, \
+            uselib=use + uselib, \
+            features=feature, \
+            export_includes=export_includes, \
+            # Add an extra define that can be checked to see if a project is built as a
+            # static library or not.
+            # This has been added because of the one above,
+            # if this is for whatever reason ever needed.
+            export_defines=[project['name'].upper() + '_AS_LIB'])
     elif project['type'] == 'exe':
-        self.program(name=project['name'], source=project['sources'], target=target, \
-            vnum=version, defines=defines + self.env.project_build_defs, includes=includes, \
-            lib=lib, libpath=lib_path, stlib=stlib, stlibpath=stlib_path, \
-            rpath=project['rpath'], use=use + ['EXE'], uselib=uselib, features=feature, \
+        task_gen = self.program( \
+            name=project['name'], \
+            source=project['sources'], \
+            target=target, \
+            vnum=version, \
+            defines=defines, \
+            includes=includes, \
+            lib=lib, \
+            libpath=lib_path, \
+            stlib=stlib, \
+            stlibpath=stlib_path, \
+            rpath=project['rpath'], \
+            use=use + ['EXE'], \
+            uselib=use + uselib, \
+            features=feature, \
             export_includes=export_includes)
     #endif
+
+    self.env['CFLAGS_' + project['name']] = export_system_includes
+    self.env['CXXFLAGS_' + project['name']] = export_system_includes
 
 from waflib.TaskGen import feature
 @feature('nounity')
