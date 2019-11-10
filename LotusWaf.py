@@ -305,7 +305,7 @@ def configure_single_use(cfg, use, use_flag):
             include_flags = current_toolset['system_include_flags']
         #endif
 
-        if include_flags == '':
+        if include_flags == '' or include_flags == []:
             include_flags = None
         #endif
 
@@ -320,7 +320,8 @@ def configure_single_use(cfg, use, use_flag):
             flags[toolset]['includes']))
 
         if include_flags == None:
-            flags[toolset]['real_includes'] = flags[toolset]['includes']
+            flags[cfg.env.cur_toolset]['real_includes'] = flags[toolset]['includes']
+            flags[toolset]['includes'] = []
         else:
             def add_system_flag(path):
                 return include_flags + [path]
@@ -659,7 +660,7 @@ def configure(cfg):
     if 'system_include_flags' in toolset:
         system_include_flags = toolset['system_include_flags']
 
-        if system_include_flags == '':
+        if system_include_flags == '' or system_include_flags == []:
             system_include_flags = None
         #endif
     #endif
@@ -869,7 +870,7 @@ def project(self, project_file):
     if 'system_include_flags' in toolset:
         include_flags = toolset['system_include_flags']
 
-        if include_flags == '':
+        if include_flags == '' or include_flags == []:
             include_flags = None
         #endif
     #endif
