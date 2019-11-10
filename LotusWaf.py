@@ -271,7 +271,7 @@ def configure_single_use(cfg, use, use_flag):
             continue
         #endif
 
-        if toolset is 'common':
+        if toolset == 'common':
             skip_common = False
 
             if cfg.env.cur_platform in use[use_flag]:
