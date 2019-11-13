@@ -6,8 +6,7 @@ from waflib.Options import OptionsContext
 
 # Show general help output when waf --help is executed
 def load_configuration_options(config, opt):
-    import platform
-    import sys
+    import platform, sys
 
     default_platform = sys.platform + '_x' + platform.machine()[-2:]
 
@@ -16,20 +15,30 @@ def load_configuration_options(config, opt):
             config['target_platforms'][0] + ', '
 
     for i in range(1, len(config['target_platforms'])):
-        platform_help = platform_help + config['target_platforms'][i] + ', '
+        platform_help += config['target_platforms'][i] + ', '
     #endfor
 
-    opt.add_option('--target-platform', action='store', dest='target_platform', \
-        default=default_platform, help=platform_help)
+    opt.add_option( \
+        '--target-platform', \
+        action='store', \
+        dest='target_platform', \
+        default=default_platform, \
+        help=platform_help)
 
-    opt.add_option('-c', '--target-configuration', action='store', dest='config', \
-        default=config['configurations'][0], help='Select the project configuration ' + \
-        'to use. Valid configurations are %r [default: %s]' % \
-        (config['configurations'], config['configurations'][0]))
+    opt.add_option( \
+        '-c', \
+        '--target-configuration', \
+        action='store', \
+        dest='config', \
+        default=config['configurations'][0], \
+        help='Select the project configuration to use. ' \
+        + 'Valid configurations are %r [default: %s]' \
+        % (config['configurations'], config['configurations'][0]))
 
     toolset_help = 'Select the toolset to use for compiling. Valid toolsets are: '
     for _platform in config['toolsets']:
         toolset_help = toolset_help + '{ platform: ' + _platform + ': '
+
         for _toolset in config['toolsets'][_platform]:
             toolset_help = toolset_help + 'toolset: ' + _toolset + ', '
         #endfor
@@ -39,14 +48,22 @@ def load_configuration_options(config, opt):
     #endfor
 
     if default_platform in config['toolsets']:
-        toolset_help = toolset_help[:-2] + '[default: %s]' % config['toolsets']\
-                [default_platform][0]
+        toolset_help = toolset_help[:-2] + '[default: %s]' \
+                % config['toolsets'][default_platform][0]
 
-        opt.add_option('--toolset', action='store', dest='toolset', \
-            default=config['toolsets'][default_platform][0], help=toolset_help)
+        opt.add_option( \
+            '--toolset', \
+            action='store', \
+            dest='toolset', \
+            default=config['toolsets'][default_platform][0], \
+            help=toolset_help)
     else:
-        print('No platform defined with the name ' + default_platform + \
-            ', unable to print toolset help.')
+        print( \
+            'No platform defined with the name ' \
+            + default_platform \
+            + ', unable to print toolset help.')
+    #endif
+#enddef
 
 # Show use specific help output when waf --help is executed
 def load_use_options(config, opt):
@@ -69,47 +86,71 @@ def load_use_options(config, opt):
         #endif
 
         if use[use_flag]['common']['optional'] == True:
-            group.add_option('--without-' + use_flag, action='store_true', \
-                dest='without_' + use_flag, default=False, help='Stops ' + \
-                use_flag + ' from being included in any project.' + \
-                ' This may be overridden by the target platform.')
+            group.add_option( \
+                '--without-' + use_flag, \
+                action='store_true', \
+                dest='without_' + use_flag, \
+                default=False, \
+                help='Stops ' + use_flag \
+                + ' from being included in any project.' \
+                + ' This may be overridden by the target platform.')
         #endif
 
         if use[use_flag]['type'] != 'headers':
-            group.add_option('--with-' + use_flag, action='store', \
-                dest='with_' + use_flag, default=None, help='Links to the ' + \
-                'static or dynamic version of ' + use_flag + '. Valid inputs are ' + \
-                '[dynamic, static] [default: defined in use flag file (usually dynamic)]')
+            group.add_option( \
+                '--with-' + use_flag, \
+                action='store', \
+                dest='with_' + use_flag, \
+                default=None, \
+                help='Links to the static or dynamic version of ' + use_flag \
+                + '. Valid inputs are [dynamic, static] ' \
+                + '[default: defined in use flag file (usually dynamic)]')
         #endif
 
-        group.add_option('--' + use_flag + '-includes', action='append', \
-            dest=use_flag + '_includes', default=None, help='Set include ' + \
-            'directories for ' + use_flag + ', specify multiple times to add ' + \
-            'multiple include directories. If not specified, the default of ' + \
-            'the use_flags file is used, if present.')
+        group.add_option( \
+            '--' + use_flag + '-includes', \
+            action='append', \
+            dest=use_flag + '_includes', \
+            default=None, \
+            help='Set include directories for ' + use_flag \
+            + ', specify multiple times to add multiple include directories. ' \
+            + 'If not specified, the default of the use_flags file is used, if present.')
 
         if use[use_flag]['type'] != 'headers':
-            group.add_option('--' + use_flag + '-libpath', action='append', \
-                dest=use_flag + '_libpath', default=None, help='Set dynamic link ' + \
-                'search directories for ' + use_flag + ', specify multiple times to ' + \
-                ' add multiple search directories. If not specified, the default of ' + \
-                'the use_flags file is used, if present.')
+            group.add_option( \
+                '--' + use_flag + '-libpath', \
+                action='append', \
+                dest=use_flag + '_libpath', \
+                default=None, \
+                help='Set dynamic link search directories for ' + use_flag \
+                + ', specify multiple times to add multiple search directories. ' \
+                + 'If not specified, the default of the use_flags file is used, if present.')
 
-            group.add_option('--' + use_flag + '-lib', action='store', \
-                dest=use_flag + '_lib', default=None, help='Set the name of the ' + \
-                'dynamic link library to link to (without lib suffix).')
+            group.add_option( \
+                '--' + use_flag + '-lib', \
+                action='store', \
+                dest=use_flag + '_lib', \
+                default=None, \
+                help='Set the name of the dynamic link library to link to (without lib suffix).')
 
-            group.add_option('--' + use_flag + '-stlibpath', action='append', \
-                dest=use_flag + '_stlibpath', default=None, help='Set static link ' + \
-                'search directories for ' + use_flag + ', specify multiple times to ' + \
-                ' add multiple search directories. If not specified, the default of ' + \
-                'the use_flags file is used, if present.')
+            group.add_option( \
+                '--' + use_flag + '-stlibpath', \
+                action='append', \
+                dest=use_flag + '_stlibpath', \
+                default=None, \
+                help='Set static link search directories for ' + use_flag \
+                + ', specify multiple times to add multiple search directories. ' \
+                + 'If not specified, the default of the use_flags file is used, if present.')
 
-            group.add_option('--' + use_flag + '-stlib', action='store', \
-                dest=use_flag + '_stlib', default=None, help='Set the name of the ' + \
-                'static link library to link to (without lib suffix).')
+            group.add_option( \
+                '--' + use_flag + '-stlib', \
+                action='store', \
+                dest=use_flag + '_stlib', \
+                default=None, \
+                help='Set the name of the static link library to link to (without lib suffix).')
         #endif
     #endfor
+#enddef
 
 # Load the toolset passed to waf via --toolset and return it as a dictionary
 def get_toolset(cfg):
@@ -132,6 +173,7 @@ def get_toolset(cfg):
     #endwith
 
     return toolset
+#enddef
 
 # Load the project configurations and return it as a dictionary
 def get_config(cfg):
@@ -152,6 +194,7 @@ def get_config(cfg):
     #endwith
 
     return config
+#enddef
 
 # Load the use flags file and return it as a dictionary
 def get_use(cfg):
@@ -173,6 +216,7 @@ def get_use(cfg):
     #endwith
 
     return use
+#enddef
 
 # Standard waf options function, called when --help is passed
 def options(opt):
@@ -181,6 +225,7 @@ def options(opt):
 
     load_configuration_options(config, opt)
     load_use_options(config, opt)
+#enddef
 
 # Parse the use flags file and command line options
 def configure_use(cfg):
@@ -191,6 +236,7 @@ def configure_use(cfg):
     for use_flag in use:
         configure_single_use(cfg, use, use_flag)
     #endfor
+#enddef
 
 # Parse a single use flag and the corresponding command line options
 def configure_single_use(cfg, use, use_flag):
@@ -579,12 +625,12 @@ def configure_single_use(cfg, use, use_flag):
         cfg.env['LDFLAGS_' + use_flag] = ld_flags
         cfg.env['INCLUDES_' + use_flag] = flags[cfg.env.cur_toolset]['real_includes']
     #endif
+#enddef
 
 # Standard waf configuration function, called when configure is passed
 # Here we load, parse and cache the toolset passed to waf
 def configure(cfg):
-    import os
-    import sys
+    import os, sys
 
     # Cache configuration flags so they can't be overriden at build (1)
     cfg.env.cur_toolset = cfg.options.toolset
@@ -639,6 +685,7 @@ def configure(cfg):
 
     if toolset['cc'] == 'msvc' or toolset['cxx'] == 'msvc':
         cfg.load('msvc_pdb')
+    #endif
 
     # Parse compiler flags, defines and system includes
     cfg.env.CFLAGS += toolset['cc_flags']
@@ -728,23 +775,12 @@ def configure(cfg):
 
     # Configure use flags
     configure_use(cfg)
+#enddef
 
 # Loads, parses, and builds a project file
 @conf
 def project(self, project_file):
     import json, os, sys
-
-    #Override unity's batch_size function so we can control unity builds per project
-    from waflib.extras import unity
-    from waflib import TaskGen, Options
-    @TaskGen.taskgen_method
-    def batch_size(self):
-        if 'nounity' in self.features:
-            return 0;
-        else: # 'unity'
-            return getattr(Options.options, 'batchsize', unity.MAX_BATCH)
-        #endif
-    #enddef
 
     config = get_config(self)
     toolset = get_toolset(self)
@@ -919,7 +955,7 @@ def project(self, project_file):
 
     task_gen = None
     if project['type'] == 'shlib':
-        task_gen = self.shlib( \
+        self.shlib( \
             name=project['name'], \
             source=project['sources'], \
             target=target, \
@@ -939,7 +975,7 @@ def project(self, project_file):
             # Needed for dllimport on windows.
             export_defines=[project['name'].upper() + '_AS_DLL'])
     elif project['type'] == 'stlib':
-        task_gen = self.stlib( \
+        self.stlib( \
             name=project['name'], \
             source=project['sources'], \
             target=target, \
@@ -961,7 +997,7 @@ def project(self, project_file):
             # if this is for whatever reason ever needed.
             export_defines=[project['name'].upper() + '_AS_LIB'])
     elif project['type'] == 'exe':
-        task_gen = self.program( \
+        self.program( \
             name=project['name'], \
             source=project['sources'], \
             target=target, \
@@ -981,13 +1017,28 @@ def project(self, project_file):
 
     self.env['CFLAGS_' + project['name']] = export_system_includes
     self.env['CXXFLAGS_' + project['name']] = export_system_includes
+#enddef
 
 from waflib.TaskGen import feature
 @feature('nounity')
 def no_unity(self):
     pass
+#enddef
 
 from waflib.TaskGen import feature
 @feature('unity')
 def unity(self):
     pass
+#enddef
+
+#Override unity's batch_size function so we can control unity builds per project
+from waflib.extras import unity
+from waflib import TaskGen, Options
+@TaskGen.taskgen_method
+def batch_size(self):
+    if 'nounity' in self.features:
+        return 0;
+    else: # 'unity'
+        return getattr(Options.options, 'batchsize', unity.MAX_BATCH)
+    #endif
+#enddef
