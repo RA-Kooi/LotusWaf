@@ -4,6 +4,9 @@
 from waflib import Logs
 from waflib.Configure import conf, ConfigurationContext
 from waflib.Options import OptionsContext
+from waflib.Tools import waf_unit_test
+
+run_tests = False
 
 # Show general help output when waf --help is executed
 def load_configuration_options(config, opt):
@@ -228,7 +231,15 @@ def get_use(cfg):
 
 # Standard waf options function, called when --help is passed
 def options(opt):
-    opt.load('unity')
+    opt.load('unity waf_unit_test')
+    opt.parser.remove_option('--alltests')
+    opt.parser.remove_option('--notests')
+    opt.parser.remove_option('--clear-failed')
+    opt.parser.remove_option('--dump-test-scripts')
+    opt.parser.remove_option('--libdir')
+    opt.parser.remove_option('--bindir')
+    opt.parser.remove_option('--out')
+    opt.parser.remove_option('--top')
     config = get_config(opt)
 
     load_configuration_options(config, opt)
@@ -797,13 +808,62 @@ def configure(cfg):
     configure_use(cfg)
 #enddef
 
+def summary(bld):
+    lst = getattr(bld, 'utest_results', [])
+    if lst:
+        total = len(lst)
+        tfail = len([x for x in lst if x[1]])
+
+        val = 100 * (total - tfail) / (1.0 * total)
+        Logs.pprint('CYAN', 'Test report: %3.0f%% success' % val)
+
+        Logs.pprint('CYAN', '  Tests that succeed: %d/%d' % (total - tfail, total))
+        Logs.pprint('CYAN', '  Tests that fail: %d/%d' % (tfail, total))
+        for (f, code, out, err) in lst:
+            if code:
+                Logs.pprint('CYAN', '    %s' % f)
+                Logs.pprint('RED', 'Status: %r' % code)
+                if out: Logs.pprint('RED', 'out: %r' % out)
+                if err: Logs.pprint('RED', 'err: %r' % err)
+            #endif
+        #endfor
+    #endif
+#enddef
+
 def build(bld):
     import sysconfig
 
     if sysconfig.get_platform() == 'mingw':
         Logs.enable_colors(2)
     #endif
+
+    global run_tests
+    if run_tests:
+        bld.options.all_tests = True
+        bld.options.no_tests = False
+    else:
+        bld.options.all_tests = False
+        bld.options.no_tests = True
+    #endif
+
+    bld.options.clear_failed_tests = True
+    bld.add_post_fun(summary)
+    bld.add_post_fun(waf_unit_test.set_exit_code)
 #enddef
+
+def test(bld):
+    global run_tests
+    run_tests = True
+
+    from waflib import Options
+    Options.commands = ['build'] + Options.commands
+#enddef
+
+from waflib.Build import BuildContext
+class TestContext(BuildContext):
+    '''Build and execute unit tests'''
+    cmd = 'test'
+    fun = 'test'
 
 # Loads, parses, and builds a project file
 @conf
@@ -1040,6 +1100,23 @@ def project(self, project_file):
             use=use + ['EXE'], \
             uselib=use + uselib, \
             features=feature, \
+            export_includes=export_includes)
+    elif project['type'] == 'test':
+        self.program( \
+            name=project['name'], \
+            source=project['sources'], \
+            target=target, \
+            vnum=version, \
+            defines=defines, \
+            includes=includes, \
+            lib=lib, \
+            libpath=lib_path, \
+            stlib=stlib, \
+            stlibpath=stlib_path, \
+            rpath=project['rpath'], \
+            use=use + ['EXE'], \
+            uselib=use + uselib, \
+            features=feature + ' test', \
             export_includes=export_includes)
     #endif
 
