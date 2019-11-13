@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
+from waflib import Logs
 from waflib.Configure import conf, ConfigurationContext
 from waflib.Options import OptionsContext
 
@@ -637,7 +638,11 @@ def configure_single_use(cfg, use, use_flag):
 # Standard waf configuration function, called when configure is passed
 # Here we load, parse and cache the toolset passed to waf
 def configure(cfg):
-    import os, sys
+    import os, sys, sysconfig
+
+    if sysconfig.get_platform() == 'mingw':
+        Logs.enable_colors(2)
+    #endif
 
     # Cache configuration flags so they can't be overriden at build (1)
     cfg.env.cur_toolset = cfg.options.toolset
@@ -790,6 +795,14 @@ def configure(cfg):
 
     # Configure use flags
     configure_use(cfg)
+#enddef
+
+def build(bld):
+    import sysconfig
+
+    if sysconfig.get_platform() == 'mingw':
+        Logs.enable_colors(2)
+    #endif
 #enddef
 
 # Loads, parses, and builds a project file
