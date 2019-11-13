@@ -19,6 +19,13 @@ def load_configuration_options(config, opt):
     #endfor
 
     opt.add_option( \
+        '--release', \
+        action='store_false', \
+        dest='development', \
+        default=True, \
+        help='Make a build for production, excludes flags like warning is error.')
+
+    opt.add_option( \
         '--target-platform', \
         action='store', \
         dest='target_platform', \
@@ -693,9 +700,17 @@ def configure(cfg):
         cfg.env.CFLAGS += toolset['cc_flags_' + cfg.options.config]
     #endif
 
+    if cfg.options.development:
+        cfg.env.CFLAGS += toolset['dev_cc_flags']
+    #endif
+
     cfg.env.CXXFLAGS += toolset['cxx_flags']
     if 'cxx_flags_' + cfg.options.config in toolset:
         cfg.env.CXXFLAGS += toolset['cxx_flags_' + cfg.options.config]
+    #endif
+
+    if cfg.options.development:
+        cfg.env.CXXFLAGS += toolset['dev_cxx_flags']
     #endif
 
     cfg.env.DEFINES += toolset['defines']['base']
