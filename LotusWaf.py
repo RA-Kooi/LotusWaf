@@ -336,24 +336,57 @@ def configure_single_use(cfg, use, use_flag):
             continue
         #endif
 
+        toolset_is_platform = False
+        if toolset == cfg.env.cur_platform:
+            toolset_is_platform = True
+        #endif
+
         if toolset == 'common':
             skip_common = False
 
             if cfg.env.cur_platform in use[use_flag]:
-                if 'no_common' in use[use_flag][cfg.env.cur_platform]:
-                    skip_common = use[use_flag][cfg.env.cur_platform]['no_common']
+                cur_platform = cfg.env.cur_platform
+
+                if isinstance(use[use_flag][cfg.env.cur_platform], str):
+                    cur_platform = use[use_flag][cfg.env.cur_platform]
+                #endif
+
+                if 'no_common' in use[use_flag][cur_platform]:
+                    skip_common = use[use_flag][cur_platform]['no_common']
                 #endif
             #endif
 
             if cfg.env.cur_toolset in use[use_flag]:
-                if 'no_common' in use[use_flag][cfg.env.cur_toolset]:
-                    skip_common = use[use_flag][cfg.env.cur_toolset]['no_common']
+                cur_toolset = cfg.env.cur_toolset
+
+                if isinstance(use[use_flag][cfg.env.cur_toolset], str):
+                    cur_toolset = use[use_flag][cfg.env.cur_toolset]
+                #endif
+
+                if 'no_common' in use[use_flag][cur_toolset]:
+                    skip_common = use[use_flag][cur_toolset]['no_common']
                 #endif
             #endif
 
             if skip_common:
                 continue
             #endif
+        #endif
+
+        if isinstance(use[use_flag][toolset], str):
+            toolset = use[use_flag][toolset]
+
+            # Toolset might be a toolset of another platform, so do this again.
+            flags.setdefault(toolset, dict())
+            flags[toolset].setdefault('defines', [])
+            flags[toolset].setdefault('includes', [])
+            flags[toolset].setdefault('cc_flags', [])
+            flags[toolset].setdefault('cxx_flags', [])
+            flags[toolset].setdefault('ld_flags', [])
+            flags[toolset].setdefault('lib_paths', [])
+            flags[toolset].setdefault('libs', [])
+            flags[toolset].setdefault('use', [])
+            flags[toolset].setdefault('real_includes', [])
         #endif
 
         if type != 'flags' \
@@ -514,6 +547,14 @@ def configure_single_use(cfg, use, use_flag):
                         os.path.normcase(os.path.normpath(os.path.join( \
                         cfg.path.abspath(), flags[toolset]['lib_paths'][i])))
             #endfor
+        #endif
+
+        if not toolset in [cfg.env.cur_platform, cfg.env.cur_toolset, 'common']:
+            if toolset_is_platform:
+                flags[cfg.env.cur_platform] = flags[toolset]
+            else:
+                flags[cfg.env.cur_toolset] = flags[toolset]
+            #endif
         #endif
     #endfor
 
