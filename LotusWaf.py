@@ -960,7 +960,10 @@ def project(self, project_file):
         #endif
     #endif
 
-    includes = project['includes']
+    includes = []
+    if 'includes' in project:
+        includes += project['includes']
+    #endif
 
     lib = []
     if 'shlib_link' in project:
@@ -992,6 +995,11 @@ def project(self, project_file):
     uselib = []
     if 'uselib' in project:
         uselib += project['uselib']
+    #endif
+
+    rpath = []
+    if 'rpath' in project:
+        rpath += project['rpath']
     #endif
 
     cc_flags = []
@@ -1101,7 +1109,7 @@ def project(self, project_file):
             libpath=lib_path, \
             stlib=stlib, \
             stlibpath=stlib_path, \
-            rpath=project['rpath'], \
+            rpath=rpath, \
             use=use, \
             uselib=use + uselib, \
             features=feature, \
@@ -1121,7 +1129,7 @@ def project(self, project_file):
             libpath=lib_path, \
             stlib=stlib, \
             stlibpath=stlib_path, \
-            rpath=project['rpath'], \
+            rpath=rpath, \
             use=use, \
             uselib=use + uselib, \
             features=feature, \
@@ -1143,7 +1151,7 @@ def project(self, project_file):
             libpath=lib_path, \
             stlib=stlib, \
             stlibpath=stlib_path, \
-            rpath=project['rpath'], \
+            rpath=rpath, \
             use=use + ['EXE'], \
             uselib=use + uselib, \
             features=feature, \
@@ -1160,7 +1168,7 @@ def project(self, project_file):
             libpath=lib_path, \
             stlib=stlib, \
             stlibpath=stlib_path, \
-            rpath=project['rpath'], \
+            rpath=rpath, \
             use=use + ['EXE'], \
             uselib=use + uselib, \
             features=feature + ' test', \
