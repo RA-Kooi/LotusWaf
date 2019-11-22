@@ -1096,11 +1096,31 @@ def project(self, project_file):
         version = ''
     #endif
 
+    sources = project['sources']
+
+    platform_sources = self.env.cur_platform + '_sources'
+    if platform_sources in project:
+        if isinstance(project[platform_sources], str):
+            platform_sources = project[platform_sources]
+        #endif
+
+        sources += project[platform_sources]
+    #endif
+
+    toolset_sources = self.env.cur_toolset + '_sources'
+    if toolset_sources in project:
+        if isinstance(project[toolset_sources], str):
+            toolset_sources = project[toolset_sources]
+        #endif
+
+        sources += project[toolset_sources]
+    #endif
+
     task_gen = None
     if project['type'] == 'shlib':
         self.shlib( \
             name=project['name'], \
-            source=project['sources'], \
+            source=sources, \
             target=target, \
             vnum=version, \
             defines=defines, \
@@ -1120,7 +1140,7 @@ def project(self, project_file):
     elif project['type'] == 'stlib':
         self.stlib( \
             name=project['name'], \
-            source=project['sources'], \
+            source=sources, \
             target=target, \
             vnum=version, \
             defines=defines, \
@@ -1142,7 +1162,7 @@ def project(self, project_file):
     elif project['type'] == 'exe':
         self.program( \
             name=project['name'], \
-            source=project['sources'], \
+            source=sources, \
             target=target, \
             vnum=version, \
             defines=defines, \
@@ -1159,7 +1179,7 @@ def project(self, project_file):
     elif project['type'] == 'test':
         self.program( \
             name=project['name'], \
-            source=project['sources'], \
+            source=sources, \
             target=target, \
             vnum=version, \
             defines=defines, \
