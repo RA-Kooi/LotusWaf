@@ -1078,7 +1078,7 @@ def project(self, project_file):
     #endif
 
     version = project['version']
-    if sys.platform == 'win32':
+    if self.env.cur_platform.startswith('win32'):
         version = ''
     #endif
 
