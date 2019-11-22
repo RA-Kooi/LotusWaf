@@ -922,6 +922,12 @@ def project(self, project_file):
         project = json.loads(project_file_.read())
     #endwith
 
+    if 'platforms' in project:
+        if not self.env.cur_platform in project['platforms']:
+            return
+        #endif
+    #endif
+
     target = project['target']
     target = os.path.normpath( \
         os.path.join( \
