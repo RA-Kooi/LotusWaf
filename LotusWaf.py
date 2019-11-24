@@ -320,7 +320,6 @@ def configure_single_use(cfg, use, use_flag):
         flags[toolset].setdefault('lib_paths', [])
         flags[toolset].setdefault('libs', [])
         flags[toolset].setdefault('use', [])
-        flags[toolset].setdefault('real_includes', [])
     #endfor
 
     if type != 'flags':
@@ -386,7 +385,6 @@ def configure_single_use(cfg, use, use_flag):
             flags[toolset].setdefault('lib_paths', [])
             flags[toolset].setdefault('libs', [])
             flags[toolset].setdefault('use', [])
-            flags[toolset].setdefault('real_includes', [])
         #endif
 
         if type != 'flags' \
@@ -398,40 +396,14 @@ def configure_single_use(cfg, use, use_flag):
 
         current_toolset = get_toolset(cfg)
 
-        include_flags = None
-        if 'system_include_flags' in current_toolset:
-            include_flags = current_toolset['system_include_flags']
-        #endif
-
-        if include_flags == '' or include_flags == []:
-            include_flags = None
-        #endif
-
         def make_flags_absolute(relative_path):
-            return os.path.normcase( \
-                os.path.normpath( \
-                    os.path.join(cfg.path.abspath(), relative_path)))
+            return os.path.normcase(os.path.normpath( \
+                os.path.join(cfg.path.abspath(), relative_path)))
         #enddef
 
         flags[toolset]['includes'] = list(map( \
             make_flags_absolute, \
             flags[toolset]['includes']))
-
-        if include_flags == None:
-            flags[cfg.env.cur_toolset]['real_includes'] = flags[toolset]['includes']
-            flags[toolset]['includes'] = []
-        else:
-            def add_system_flag(path):
-                return include_flags + [path]
-            #enddef
-
-            flags[toolset]['includes'] = list( \
-                map(add_system_flag, flags[toolset]['includes']))
-
-            flatten = lambda l: [item for sublist in l for item in sublist]
-
-            flags[toolset]['includes'] = flatten(flags[toolset]['includes'])
-        #endif
 
         if 'defines' in use[use_flag][toolset]:
             if 'base' in use[use_flag][toolset]['defines']:
@@ -642,13 +614,13 @@ def configure_single_use(cfg, use, use_flag):
                 fragment=source, \
                 use=use + [use_flag] + ['EXE'], \
                 uselib_store=use_flag, \
-                cxxflags=includes + cxx_flags, \
-                cflags=includes + cc_flags, \
+                cxxflags=cxx_flags, \
+                cflags=cc_flags, \
                 ldflags=ld_flags, \
                 libpath=lib_paths, \
                 lib=libs, \
                 defines=defines, \
-                includes=flags[cfg.env.cur_toolset]['real_includes'], \
+                system_includes=includes, \
                 msg='Checking for dynamic library <' + use_flag + '>', \
                 mandatory=not optional)
         elif cfg.options.__dict__['with_' + use_flag] == 'static':
@@ -656,13 +628,13 @@ def configure_single_use(cfg, use, use_flag):
                 fragment=source, \
                 use=use + [use_flag] + ['EXE'], \
                 uselib_store=use_flag, \
-                cxxflags=includes + cxx_flags, \
-                cflags=includes + cc_flags, \
+                cxxflags=cxx_flags, \
+                cflags=cc_flags, \
                 ldflags=ld_flags, \
                 stlibpath=lib_paths, \
                 stlib=libs, \
                 defines=defines, \
-                includes=flags[cfg.env.cur_toolset]['real_includes'], \
+                system_includes=includes, \
                 msg='Checking for static library <' + use_flag + '>', \
                 mandatory=not optional)
         #endif
@@ -672,18 +644,18 @@ def configure_single_use(cfg, use, use_flag):
             use=use + [use_flag] + ['EXE'], \
             uselib_store=use_flag, \
             defines=defines, \
-            cxxflags=includes + cxx_flags, \
-            cflags=includes + cc_flags, \
+            cxxflags=cxx_flags, \
+            cflags=cc_flags, \
             ldflags=ld_flags, \
-            includes=flags[cfg.env.cur_toolset]['real_includes'], \
+            system_includes=includes, \
             msg='Checking for header only library <' + use_flag +'>', \
             mandatory=not optional)
     elif type == 'flags':
         print('Adding extra flags for <' + use_flag + '>')
-        cfg.env['CFLAGS_' + use_flag] = cc_flags + includes
-        cfg.env['CXXFLAGS_' + use_flag] = cxx_flags + includes
+        cfg.env['CFLAGS_' + use_flag] = cc_flags
+        cfg.env['CXXFLAGS_' + use_flag] = cxx_flags
         cfg.env['LDFLAGS_' + use_flag] = ld_flags
-        cfg.env['INCLUDES_' + use_flag] = flags[cfg.env.cur_toolset]['real_includes']
+        cfg.env['SYSINCLUDES_' + use_flag] = includes
     #endif
 #enddef
 
@@ -691,6 +663,10 @@ def configure_single_use(cfg, use, use_flag):
 # Here we load, parse and cache the toolset passed to waf
 def configure(cfg):
     import os, sys, sysconfig
+
+    from waflib.Tools.ccroot import USELIB_VARS
+    USELIB_VARS['c'].add('SYSINCLUDES')
+    USELIB_VARS['cxx'].add('SYSINCLUDES')
 
     if sysconfig.get_platform() == 'mingw':
         Logs.enable_colors(2)
@@ -775,25 +751,23 @@ def configure(cfg):
         cfg.env.DEFINES += toolset['defines'][cfg.options.config]
     #endif
 
-    system_include_flags = None
-    if 'system_include_flags' in toolset:
-        system_include_flags = toolset['system_include_flags']
-
-        if system_include_flags == '' or system_include_flags == []:
-            system_include_flags = None
-        #endif
+    system_include_flag = None
+    if not 'system_include_flag' in toolset:
+        cfg.fatal('system_include_flag is required!')
     #endif
 
+    system_include_flag = toolset['system_include_flag']
+
+    if system_include_flag == '' or system_include_flag == []:
+        system_include_flags = None
+    #endif
+    cfg.env.SYSINCFLAG = system_include_flag
+    cfg.env.SYSINCLUDES = []
+
     for path in toolset['system_includes']:
-        if system_include_flags == None:
-            cfg.env.INCLUDES += os.path.normcase(os.path.normpath(os.path.join( \
-            cfg.path.abspath(), path)))
-        else:
-            flag = system_include_flags + [os.path.normcase(os.path.normpath(os.path.join( \
+            flag = [os.path.normcase(os.path.normpath(os.path.join( \
                 cfg.path.abspath(), path)))]
-            cfg.env.CFLAGS += flag
-            cfg.env.CXXFLAGS += flag
-        #endif
+            cfg.env.SYSINCLUDES += flag
     #endfor
 
     if cfg.env.CC_NAME == 'msvc' or cfg.env.CXX_NAME == 'msvc':
@@ -873,6 +847,10 @@ def summary(bld):
 
 def build(bld):
     import sysconfig
+
+    from waflib.Tools.ccroot import USELIB_VARS
+    USELIB_VARS['c'].add('SYSINCLUDES')
+    USELIB_VARS['cxx'].add('SYSINCLUDES')
 
     if sysconfig.get_platform() == 'mingw':
         Logs.enable_colors(2)
@@ -1045,15 +1023,6 @@ def project(self, project_file):
         #endif
     #endif
 
-    include_flags = None
-    if 'system_include_flags' in toolset:
-        include_flags = toolset['system_include_flags']
-
-        if include_flags == '' or include_flags == []:
-            include_flags = None
-        #endif
-    #endif
-
     def make_flags_absolute(relative_path):
         return os.path.normcase( \
             os.path.normpath( \
@@ -1061,27 +1030,12 @@ def project(self, project_file):
     #enddef
 
     export_includes = []
-    export_system_includes = []
     if 'export_includes' in project:
         project['export_includes'] = list(map( \
             make_flags_absolute,
             project['export_includes']))
 
-        if include_flags == None:
-            export_includes += project['export_includes']
-        else:
-            def add_system_flag(path):
-                return include_flags + [path]
-            #enddef
-
-            project['export_includes'] = list( \
-                map(add_system_flag, project['export_includes']))
-
-            flatten = lambda l: [item for sublist in l for item in sublist]
-
-            project['export_includes'] = flatten(project['export_includes'])
-            export_system_includes = project['export_includes']
-        #endif
+        export_includes = project['export_includes']
     #endif
 
     # If a project is in unity build mode, we pass the unity feature.
@@ -1133,7 +1087,7 @@ def project(self, project_file):
             use=use, \
             uselib=use + uselib, \
             features=feature, \
-            export_includes=export_includes, \
+            export_system_includes=export_includes, \
             # Add an extra define that can be checked to see if a project is built as a DLL or not.
             # Needed for dllimport on windows.
             export_defines=[project['name'].upper() + '_AS_DLL'])
@@ -1153,7 +1107,7 @@ def project(self, project_file):
             use=use, \
             uselib=use + uselib, \
             features=feature, \
-            export_includes=export_includes, \
+            export_system_includes=export_includes, \
             # Add an extra define that can be checked to see if a project is built as a
             # static library or not.
             # This has been added because of the one above,
@@ -1175,7 +1129,7 @@ def project(self, project_file):
             use=use + ['EXE'], \
             uselib=use + uselib, \
             features=feature, \
-            export_includes=export_includes)
+            export_system_includes=export_includes)
     elif project['type'] == 'test':
         self.program( \
             name=project['name'], \
@@ -1192,11 +1146,8 @@ def project(self, project_file):
             use=use + ['EXE'], \
             uselib=use + uselib, \
             features=feature + ' test', \
-            export_includes=export_includes)
+            export_system_includes=export_includes)
     #endif
-
-    self.env['CFLAGS_' + project['name']] = export_system_includes
-    self.env['CXXFLAGS_' + project['name']] = export_system_includes
 #enddef
 
 from waflib.TaskGen import feature
@@ -1220,5 +1171,112 @@ def batch_size(self):
         return 0;
     else: # 'unity'
         return getattr(Options.options, 'batchsize', unity.MAX_BATCH)
+    #endif
+#enddef
+
+from waflib.TaskGen import feature, before_method, after_method
+@feature('c', 'cxx', 'use')
+@before_method('apply_incpaths', 'propagate_uselib_vars')
+@after_method('process_use')
+def process_extra_use(self):
+    """
+    Process the ``use`` attribute which contains a list of task generator names::
+
+        def build(bld):
+            bld.shlib(source='a.c', target='lib1')
+            bld.program(source='main.c', target='app', use='lib1')
+
+    See :py:func:`waflib.Tools.ccroot.use_rec`.
+    """
+
+    #from waflib.Tools import ccroot
+
+    use_not = self.tmp_use_not = set()
+    self.tmp_use_seen = [] # we would like an ordered set
+    use_prec = self.tmp_use_prec = {}
+    self.system_includes = self.to_list(getattr(self, 'system_includes', []))
+    names = self.to_list(getattr(self, 'use', []))
+
+    for x in names:
+        self.use_rec(x)
+    #endfor
+
+    for x in use_not:
+        if x in use_prec:
+            del use_prec[x]
+        #endif
+    #endfor
+
+    # topological sort
+    out = self.tmp_use_sorted = []
+    tmp = []
+    for x in self.tmp_use_seen:
+        for k in use_prec.values():
+            if x in k:
+                break
+            #endif
+        else:
+            tmp.append(x)
+        #endfor
+    #endfor
+
+    while tmp:
+        e = tmp.pop()
+        out.append(e)
+        try:
+            nlst = use_prec[e]
+        except KeyError:
+            pass
+        else:
+            del use_prec[e]
+            for x in nlst:
+                for y in use_prec:
+                    if x in use_prec[y]:
+                        break
+                    #endif
+                else:
+                    tmp.append(x)
+                #endfor
+            #endfor
+        #endtry
+    #endwhile
+
+    if use_prec:
+        raise Errors.WafError('Cycle detected in the use processing %r' \
+            % use_prec)
+    #endif
+    out.reverse()
+
+    for x in out:
+        y = self.bld.get_tgen_by_name(x)
+        if getattr(y, 'export_system_includes', None):
+            # self.system_includes may come from a global variable #2035
+            self.system_includes = self.system_includes \
+                + y.to_incnodes(y.export_system_includes)
+        #endif
+    #endfor
+#enddef
+
+from waflib.TaskGen import feature, after_method
+@feature('c', 'cxx', 'system_includes')
+@after_method('propagate_uselib_vars', 'process_source', 'apply_incpaths')
+def apply_sysinc(self):
+    nodes = self.to_incnodes(self.to_list(getattr(self, 'system_includes', [])) \
+        + self.env.SYSINCLUDES)
+    self.includes_nodes += nodes
+    cwd = self.get_cwd()
+
+    if self.env.SYSINCFLAG:
+        for node in nodes:
+            self.env.append_value( \
+                'CFLAGS', \
+                [self.env.SYSINCFLAG] + [node.path_from(cwd)])
+
+            self.env.append_value( \
+                'CXXFLAGS', \
+                [self.env.SYSINCFLAG] + [node.path_from(cwd)])
+        #endfor
+    else:
+        self.env.INCPATHS = [x.path_from(cwd) for x in nodes]
     #endif
 #enddef
