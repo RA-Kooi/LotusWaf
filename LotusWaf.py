@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-from waflib import Logs
+import platform, sys, json, os, sysconfig
+
+from waflib import Logs, TaskGen, Options
+from waflib.Build import BuildContext
 from waflib.Configure import conf, ConfigurationContext
 from waflib.Options import OptionsContext
+from waflib.TaskGen import feature, before_method, after_method, taskgen_method
 from waflib.Tools import waf_unit_test
+from waflib.Tools.ccroot import USELIB_VARS
 
 run_tests = False
 
 # Show general help output when waf --help is executed
 def load_configuration_options(config, opt):
-    import platform, sys
-
     default_platform = sys.platform + '_x' + platform.machine()[-2:]
 
     platform_help ='Set the target platform you want to build for.\n' + \
@@ -165,10 +168,6 @@ def load_use_options(config, opt):
 
 # Load the toolset passed to waf via --toolset and return it as a dictionary
 def get_toolset(cfg):
-    import json
-    import os
-    # TODO: Check if toolset is valid
-
     toolset = []
     file = str()
     if type(cfg) is ConfigurationContext or type(cfg) is OptionsContext:
@@ -180,18 +179,12 @@ def get_toolset(cfg):
     #endif
 
     with open(file, encoding='utf-8') as toolset_file:
-        toolset = json.loads(toolset_file.read())
+        return json.loads(toolset_file.read())
     #endwith
-
-    return toolset
 #enddef
 
 # Load the project configurations and return it as a dictionary
 def get_config(cfg):
-    import json
-    import os
-
-    config = []
     file = str()
     if type(cfg) is ConfigurationContext or type(cfg) is OptionsContext:
         file = 'project_configurations.lotus_config'
@@ -201,18 +194,13 @@ def get_config(cfg):
     #endif
 
     with open(file, encoding='utf-8') as config_file:
-        config = json.loads(config_file.read())
+        return json.loads(config_file.read())
     #endwith
-
-    return config
 #enddef
 
 # Load the use flags file and return it as a dictionary
 def get_use(cfg):
-    import json
-    import os
 
-    use = []
     file = str()
     if type(cfg) is ConfigurationContext or type(cfg) is OptionsContext:
         file = os.path.normcase(os.path.normpath( \
@@ -223,10 +211,8 @@ def get_use(cfg):
     #endif
 
     with open(file, encoding='utf-8') as config_file:
-        use = json.loads(config_file.read())
+        return json.loads(config_file.read())
     #endwith
-
-    return use
 #enddef
 
 # Standard waf options function, called when --help is passed
@@ -248,8 +234,6 @@ def options(opt):
 
 # Parse the use flags file and command line options
 def configure_use(cfg):
-    import os
-
     use = get_use(cfg)
 
     for use_flag in use:
@@ -259,8 +243,6 @@ def configure_use(cfg):
 
 # Parse a single use flag and the corresponding command line options
 def configure_single_use(cfg, use, use_flag):
-    import os
-
     type = str()
     if not 'type' in use[use_flag]:
         cfg.fatal(use_flag + ': Use flag type is required!')
@@ -387,6 +369,12 @@ def configure_single_use(cfg, use, use_flag):
             flags[toolset].setdefault('use', [])
         #endif
 
+        def read_option(write_option, variation_option, obj):
+            if variation_option in obj:
+                flags[toolset][write_option] += obj[variation_option]
+            #endif
+        #enddef
+
         if type != 'flags' \
                 and cfg.options.__dict__[use_flag + '_includes'] != None:
             flags[toolset]['includes'] = cfg.options.__dict__[use_flag + '_includes']
@@ -395,6 +383,7 @@ def configure_single_use(cfg, use, use_flag):
         #endif
 
         current_toolset = get_toolset(cfg)
+        cur_conf = cfg.env.cur_conf
 
         def make_flags_absolute(relative_path):
             return os.path.normcase(os.path.normpath( \
@@ -406,64 +395,23 @@ def configure_single_use(cfg, use, use_flag):
             flags[toolset]['includes']))
 
         if 'defines' in use[use_flag][toolset]:
-            if 'base' in use[use_flag][toolset]['defines']:
-                flags[toolset]['defines'] += use[use_flag][toolset]['defines']['base']
-            #endif
+            read_option('defines', 'base', use[use_flag][toolset]['defines'])
+            read_option('defines', cur_conf, use[use_flag][toolset]['defines'])
 
-            if cfg.env.cur_conf in use[use_flag][toolset]['defines']:
-                flags[toolset]['defines'] += \
-                    use[use_flag][toolset]['defines'][cfg.env.cur_conf]
-            #endif
-
-            if 'stlib' in use[use_flag][toolset]['defines']:
-                flags[toolset]['defines'] += use[use_flag][toolset]['defines']['stlib']
-            #endif
-
-            if 'stlib_' + cfg.env.cur_conf in use[use_flag][toolset]['defines']:
-                flags[toolset]['defines'] += \
-                    use[use_flag][toolset]['defines']['stlib_' + cfg.env.cur_conf]
-            #endif
-
-            if 'shlib' in use[use_flag][toolset]['defines']:
-                flags[toolset]['defines'] += use[use_flag][toolset]['defines']['shlib']
-            #endif
-
-            if 'shlib_' + cfg.env.cur_conf in use[use_flag][toolset]['defines']:
-                flags[toolset]['defines'] += \
-                    use[use_flag][toolset]['defines']['shlib_' + cfg.env.cur_conf]
-            #endif
+            for option in ['stlib', 'shlib']:
+                read_option('defines', option, use[use_flag][toolset]['defines'])
+                read_option( \
+                    'defines', \
+                    option + '_' + cur_conf, \
+                    use[use_flag][toolset]['defines'])
+            #endfor
         #endif
 
-        if 'cc_flags' in use[use_flag][toolset]:
-            flags[toolset]['cc_flags'] += use[use_flag][toolset]['cc_flags']
-        #endif
-
-        if 'cc_flags_' + cfg.env.cur_conf in use[use_flag][toolset]:
-            flags[toolset]['cc_flags'] += \
-                use[use_flag][toolset]['cc_flags_' + cfg.env.cur_conf]
-        #endif
-
-        if 'cxx_flags' in use[use_flag][toolset]:
-            flags[toolset]['cxx_flags'] += use[use_flag][toolset]['cxx_flags']
-        #endif
-
-        if 'cxx_flags_' + cfg.env.cur_conf in use[use_flag][toolset]:
-            flags[toolset]['cxx_flags'] += \
-                    use[use_flag][toolset]['cxx_flags_' + cfg.env.cur_conf]
-        #endif
-
-        if 'ld_flags' in use[use_flag][toolset]:
-            flags[toolset]['ld_flags'] += use[use_flag][toolset]['ld_flags']
-        #endif
-
-        if 'ld_flags_' + cfg.env.cur_conf in use[use_flag][toolset]:
-            flags[toolset]['ld_flags'] += \
-                    use[use_flag][toolset]['ld_flags_' + cfg.env.cur_conf]
-        #endif
-
-        if 'use' in use[use_flag][toolset]:
-            flags[toolset]['use'] += use[use_flag][toolset]['use']
-        #endif
+        for option in ['cc_flags', 'cxx_flags', 'ld_flags']:
+            read_option(option, option, use[use_flag][toolset])
+            read_option(option, option + '_' + cur_conf, use[use_flag][toolset])
+        #endfor
+        read_option('use', 'use', use[use_flag][toolset])
 
         # This should probably be made more readable somehow,
         # but idk how to check for the options without horrible hacks
@@ -472,11 +420,13 @@ def configure_single_use(cfg, use, use_flag):
             default_shared = True
             if 'shared' in use[use_flag][toolset]:
                 default_shared = use[use_flag][toolset]['shared']
+            #endif
 
             if cfg.options.__dict__['with_' + use_flag] == 'dynamic':
                 default_shared = True
             elif cfg.options.__dict__['with_' + use_flag] == 'static':
                 default_shared = False
+            #endif
 
             if default_shared:
                 cfg.options.__dict__['with_' + use_flag] = 'dynamic'
@@ -498,8 +448,7 @@ def configure_single_use(cfg, use, use_flag):
                 cfg.options.__dict__['with_' + use_flag] = 'static'
 
                 if cfg.options.__dict__[use_flag + '_stlibpath'] != None:
-                    flags[toolset]['lib_paths'] = \
-                            cfg.options.__dict__[use_flag + '_stlibpath']
+                    flags[toolset]['lib_paths'] = cfg.options.__dict__[use_flag + '_stlibpath']
                 # No command line option passed
                 elif 'stlib_path' in use[use_flag][toolset]:
                     flags[toolset]['lib_paths'] = use[use_flag][toolset]['stlib_path']
@@ -564,6 +513,7 @@ def configure_single_use(cfg, use, use_flag):
         ld_flags = flags[cfg.env.cur_platform]['ld_flags']
     else:
         ld_flags = flags['common']['ld_flags']
+    #endif
 
     lib_paths = []
 
@@ -573,6 +523,7 @@ def configure_single_use(cfg, use, use_flag):
         lib_paths = flags[cfg.env.cur_platform]['lib_paths']
     else:
         lib_paths = flags['common']['lib_paths']
+    #endif
 
     libs = []
 
@@ -582,6 +533,7 @@ def configure_single_use(cfg, use, use_flag):
         libs = flags[cfg.env.cur_platform]['libs']
     else:
         libs = flags['common']['libs']
+    #endif
 
     # remove duplicates from the list
     for toolset in flags:
@@ -589,24 +541,6 @@ def configure_single_use(cfg, use, use_flag):
             flags[toolset][sublist] = list(dict.fromkeys(flags[toolset][sublist]))
         #endfor
     #endfor
-
-    if cfg.env.CC_NAME == 'msvc' or cfg.env.CXX_NAME == 'msvc':
-        for toolset in flags:
-            for cflags in ['cc_flags', 'cxx_flags']:
-                for flag in flags[toolset][cflags]:
-                    if flag[1:].lower() == 'fs':
-                        cfg.fatal(use_flag  + ': Don\'t add the /FS flag, ' +
-                            'this will be handled by LotusWaf!')
-                    #endif
-
-                    if flag[1:3].lower() == 'fd':
-                        cfg.fatal(use_flag + ': Don\'t add the /Fd flag, ' + \
-                            'this will be handled by LotusWaf!')
-                    #endif
-                #endfor
-            #endfor
-        #endfor
-    #endif
 
     if type == 'lib':
         if cfg.options.__dict__['with_' + use_flag] == 'dynamic':
@@ -662,9 +596,6 @@ def configure_single_use(cfg, use, use_flag):
 # Standard waf configuration function, called when configure is passed
 # Here we load, parse and cache the toolset passed to waf
 def configure(cfg):
-    import os, sys, sysconfig
-
-    from waflib.Tools.ccroot import USELIB_VARS
     USELIB_VARS['c'].add('SYSINCLUDES')
     USELIB_VARS['cxx'].add('SYSINCLUDES')
 
@@ -727,29 +658,48 @@ def configure(cfg):
         cfg.load('msvc_pdb')
     #endif
 
-    # Parse compiler flags, defines and system includes
-    cfg.env.CFLAGS += toolset['cc_flags']
-    if 'cc_flags_' + cfg.options.config in toolset:
-        cfg.env.CFLAGS += toolset['cc_flags_' + cfg.options.config]
+    if not 'forced_include_flag' in toolset:
+        cfg.fatal('Toolset requires a forced_include_flag attribute')
     #endif
+
+    if toolset['forced_include_flag'] == None \
+        or toolset['forced_include_flag'] == '' \
+        or toolset['forced_include_flag'] == []:
+        cfg.fatal('forced_include_flag cannot be empty')
+    #endif
+    cfg.env.FORCEINCFLAG = toolset['forced_include_flag']
+    cfg.env.FORCEINCLUDES = []
+
+    def read_optional_flag(target, option, obj = toolset):
+        if option in obj:
+            cfg.env.append_value(target, obj[option])
+        #endif
+    #enddef
+
+    # Parse compiler flags, defines and system includes
+    for env_flag, toolset_flag in \
+        [ \
+            ('CFLAGS', 'cc_flags'), \
+            ('CXXFLAGS', 'cxx_flags'), \
+            ('ARFLAGS', 'stlib_flags'), \
+            ('STLIBPATH', 'stlib_path'), \
+            ('LINKFLAGS_cshlib', 'shlib_flags'), \
+            ('LINKFLAGS_cxxshlib', 'shlib_flags'), \
+            ('LIBPATH', 'shlib_path'), \
+            ('LINKFLAGS_EXE', 'exe_flags'), \
+            ('LDFLAGS', 'ld_flags')
+        ]:
+        cfg.env[env_flag] = toolset[toolset_flag]
+        read_optional_flag(env_flag, toolset_flag + '_' + cfg.options.config)
+    #endfor
 
     if cfg.options.development:
         cfg.env.CFLAGS += toolset['dev_cc_flags']
-    #endif
-
-    cfg.env.CXXFLAGS += toolset['cxx_flags']
-    if 'cxx_flags_' + cfg.options.config in toolset:
-        cfg.env.CXXFLAGS += toolset['cxx_flags_' + cfg.options.config]
-    #endif
-
-    if cfg.options.development:
         cfg.env.CXXFLAGS += toolset['dev_cxx_flags']
     #endif
 
     cfg.env.DEFINES += toolset['defines']['base']
-    if cfg.options.config in toolset['defines']:
-        cfg.env.DEFINES += toolset['defines'][cfg.options.config]
-    #endif
+    read_optional_flag('DEFINES', cfg.options.config, toolset['defines'])
 
     system_include_flag = None
     if not 'system_include_flag' in toolset:
@@ -769,55 +719,6 @@ def configure(cfg):
                 cfg.path.abspath(), path)))]
             cfg.env.SYSINCLUDES += flag
     #endfor
-
-    if cfg.env.CC_NAME == 'msvc' or cfg.env.CXX_NAME == 'msvc':
-        for flags in ['CFLAGS', 'CXXFLAGS']:
-            for flag in cfg.env[flags]:
-                if flag[1:].lower() == 'fs':
-                    cfg.fatal('Don\'t add the /FS flag, this will be handled' + \
-                        ' by LotusWaf!')
-                #endif
-
-                if flag[1:3].lower() == 'fd':
-                    cfg.fatal('Don\'t add the /Fd flag, this will be handled' + \
-                        ' by LotusWaf!')
-                #endif
-            #endfor
-        #endfor
-    #endif
-
-    # Parse linker flags and static lib flags
-    cfg.env.ARFLAGS = toolset['stlib_flags']
-    if 'stlib_flags_' + cfg.options.config in toolset:
-        cfg.env.ARFLAGS += toolset['stlib_flags_' + cfg.options.config]
-    #endif
-
-    cfg.env.STLIBPATH = toolset['stlib_path']
-    if 'stlib_path_' + cfg.options.config in toolset:
-        cfg.env.STLIBPATH += toolset['stlib_path_' + cfg.options.config]
-    #endif
-
-    cfg.env.LINKFLAGS_cshlib = toolset['shlib_flags']
-    cfg.env.LINKFLAGS_cxxshlib = toolset['shlib_flags']
-    if 'shlib_flags_' + cfg.options.config in toolset:
-        cfg.env.LINKFLAGS_cshlib += toolset['shlib_flags_' + cfg.options.config]
-        cfg.env.LINKFLAGS_cxxshlib += toolset['shlib_flags_' + cfg.options.config]
-    #endif
-
-    cfg.env.LIBPATH = toolset['shlib_path']
-    if 'shlib_path_' + cfg.options.config in toolset:
-        cfg.env.LIBPATH += toolset['shlib_path_' + cfg.options.config]
-    #endif
-
-    cfg.env.LINKFLAGS_EXE = toolset['exe_flags']
-    if 'exe_flags_' + cfg.options.config in toolset:
-        cfg.env.LINKFLAGS_EXE += toolset['exe_flags_' + cfg.options.config]
-    #endif
-
-    cfg.env.LDFLAGS = toolset['ld_flags']
-    if 'ld_flags_' + cfg.options.config in toolset:
-        cfg.env.LDFLAGS += toolset['ld_flags_' + cfg.options.config]
-    #endif
 
     # Configure use flags
     configure_use(cfg)
@@ -846,9 +747,6 @@ def summary(bld):
 #enddef
 
 def build(bld):
-    import sysconfig
-
-    from waflib.Tools.ccroot import USELIB_VARS
     USELIB_VARS['c'].add('SYSINCLUDES')
     USELIB_VARS['cxx'].add('SYSINCLUDES')
 
@@ -874,11 +772,9 @@ def test(bld):
     global run_tests
     run_tests = True
 
-    from waflib import Options
     Options.commands = ['build'] + Options.commands
 #enddef
 
-from waflib.Build import BuildContext
 class TestContext(BuildContext):
     '''Build and execute unit tests'''
     cmd = 'test'
@@ -887,10 +783,10 @@ class TestContext(BuildContext):
 # Loads, parses, and builds a project file
 @conf
 def project(self, project_file):
-    import json, os, sys
-
     config = get_config(self)
     toolset = get_toolset(self)
+    cur_conf = self.env.cur_conf
+    cur_platform = self.env.cur_platform
 
     # Load the project file and store it in a dictionary
     project = []
@@ -919,107 +815,67 @@ def project(self, project_file):
         target = target.replace('/', '\\')
     #endif
 
+    def read_option(var, option, obj = project):
+        if option in obj:
+            var += obj[option]
+        #endif
+    #enddef
+
     defines = []
     if 'defines' in project:
-        if 'base' in project['defines']:
-            defines += project['defines']['base']
-        #endif
-
-        if self.env.cur_conf in project['defines']:
-            defines += project['defines'][self.env.cur_conf]
-        #endif
-
-        if project['type'] in project['defines']:
-            defines += project['defines'][project['type']]
-        #endif
-
-        if (project['type'] + '_' + self.env.cur_conf) in project['defines']:
-            defines += project['defines'][project['type'] + '_' + self.env.cur_conf]
-        #endif
+        read_option(defines, 'base', project['defines'])
+        read_option(defines, cur_conf, project['defines'])
+        read_option(defines, project['type'], project['defines'])
+        read_option( \
+            defines, \
+            project['type'] + '_' + self.env.cur_conf, \
+            project['defines'])
     #endif
 
     includes = []
-    if 'includes' in project:
-        includes += project['includes']
-    #endif
-
     lib = []
-    if 'shlib_link' in project:
-        lib += project['shlib_link']
-    #endif
-
     lib_path = []
-    if 'shlib_path' in project:
-        lib_path += project['shlib_path']
-    #endif
-
     stlib = []
-    if 'stlib_link' in project:
-        stlib += project['stlib_link']
-    #endif
-
     stlib_path = []
-    if 'stlib_path' in project:
-        stlib_path += project['stlib_path']
-    #endif
-
     use = []
-    if 'use' in project:
-        use += project['use']
-    #endif
+
+    read_option(includes, 'includes')
+    read_option(lib, 'shlib_link')
+    read_option(lib_path, 'shlib_path')
+    read_option(stlib, 'stlib_link')
+    read_option(stlib_path, 'stlib_path')
+    read_option(use, 'use')
 
     # These are use variables which are NOT propagated to the project use flag
     # This means that you should put extra compile flag uses in this
     uselib = []
-    if 'uselib' in project:
-        uselib += project['uselib']
-    #endif
-
     rpath = []
-    if 'rpath' in project:
-        rpath += project['rpath']
-    #endif
 
-    cc_flags = []
+    read_option(uselib, 'uselib')
+    read_option(rpath, 'rpath')
+
     if self.env.cur_platform in project:
         if 'defines' in project[self.env.cur_platform]:
-            if 'base' in project[self.env.cur_platform]['defines']:
-                defines += project[self.env.cur_platform]['defines']['base']
-            #endif
+            def read_option(var, option, obj = project[cur_platform]):
+                if option in obj:
+                    var += obj
+                #endif
+            #enddef
 
-            if self.env.cur_conf in project[self.env.cur_platform]['defines']:
-                defines += project[self.env.cur_platform]['defines'][self.env.cur_conf]
-            #endif
+            def read_option2(var, option, obj):
+                read_option(var, option, project[cur_platform][obj])
+            #enddef
 
-            if project['type'] in project[self.env.cur_platform]['defines']:
-                defines += project[self.env.cur_platform]['defines'][project['type']]
-            #endif
+            read_option2(defines, 'base', 'defines')
+            read_option2(defines, cur_conf, 'defines')
+            read_option2(defines, project['type'], 'defines')
+            read_option2(defines, project['type'] + '_' + cur_conf, 'defines')
 
-            if (project['type'] + '_' + self.env.cur_conf) in \
-                    project[self.env.cur_platform]['defines']:
-                defines += project[self.env.cur_platform]['defines'][project['type'] + \
-                        '_' + self.env.cur_conf]
-            #endif
-
-            if 'includes' in project[self.env.cur_platform]:
-                includes += project[self.env.cur_platform]['includes']
-            #endif
-
-            if 'shlib_link' in project[self.env.cur_platform]:
-                lib += project[self.env.cur_platform]['shlib_link']
-            #endif
-
-            if 'shlib_path' in project[self.env.cur_platform]:
-                lib_path += project[self.env.cur_platform]['shlib_path']
-            #endif
-
-            if 'stlib_link' in project[self.env.cur_platform]:
-                stlib += project[self.env.cur_platform]['stlib_link']
-            #endif
-
-            if 'stlib_path' in project[self.env.cur_platform]:
-                stlib_path += project[self.env.cur_platform]['stlib_path']
-            #endif
+            read_option(includes, 'includes')
+            read_option(lib, 'shlib_link')
+            read_option(lib_path, 'shlib_path')
+            read_option(stlib, 'stlib_link')
+            read_option(stlib_path, 'stlib_path')
         #endif
     #endif
 
@@ -1150,13 +1006,11 @@ def project(self, project_file):
     #endif
 #enddef
 
-from waflib.TaskGen import feature
 @feature('nounity')
 def no_unity(self):
     pass
 #enddef
 
-from waflib.TaskGen import feature
 @feature('unity')
 def unity(self):
     pass
@@ -1164,8 +1018,7 @@ def unity(self):
 
 #Override unity's batch_size function so we can control unity builds per project
 from waflib.extras import unity
-from waflib import TaskGen, Options
-@TaskGen.taskgen_method
+@taskgen_method
 def batch_size(self):
     if 'nounity' in self.features:
         return 0;
@@ -1174,7 +1027,6 @@ def batch_size(self):
     #endif
 #enddef
 
-from waflib.TaskGen import feature, before_method, after_method
 @feature('c', 'cxx', 'use')
 @before_method('apply_incpaths', 'propagate_uselib_vars')
 @after_method('process_use')
@@ -1257,7 +1109,6 @@ def process_extra_use(self):
     #endfor
 #enddef
 
-from waflib.TaskGen import feature, after_method
 @feature('c', 'cxx', 'system_includes')
 @after_method('propagate_uselib_vars', 'process_source', 'apply_incpaths')
 def apply_sysinc(self):
