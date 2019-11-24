@@ -302,6 +302,7 @@ def configure_single_use(cfg, use, use_flag):
         flags[toolset].setdefault('lib_paths', [])
         flags[toolset].setdefault('libs', [])
         flags[toolset].setdefault('use', [])
+        flags[toolset].setdefault('forced_includes', [])
     #endfor
 
     if type != 'flags':
@@ -367,6 +368,7 @@ def configure_single_use(cfg, use, use_flag):
             flags[toolset].setdefault('lib_paths', [])
             flags[toolset].setdefault('libs', [])
             flags[toolset].setdefault('use', [])
+            flags[toolset].setdefault('forced_includes', [])
         #endif
 
         def read_option(write_option, variation_option, obj):
@@ -833,6 +835,7 @@ def project(self, project_file):
     #endif
 
     includes = []
+    export_force_includes = []
     lib = []
     lib_path = []
     stlib = []
@@ -840,6 +843,7 @@ def project(self, project_file):
     use = []
 
     read_option(includes, 'includes')
+    read_option(export_force_includes, 'export_force_includes')
     read_option(lib, 'shlib_link')
     read_option(lib_path, 'shlib_path')
     read_option(stlib, 'stlib_link')
@@ -872,6 +876,7 @@ def project(self, project_file):
             read_option2(defines, project['type'] + '_' + cur_conf, 'defines')
 
             read_option(includes, 'includes')
+            read_option(export_force_includes, 'export_force_includes')
             read_option(lib, 'shlib_link')
             read_option(lib_path, 'shlib_path')
             read_option(stlib, 'stlib_link')
@@ -944,6 +949,7 @@ def project(self, project_file):
             uselib=use + uselib, \
             features=feature, \
             export_system_includes=export_includes, \
+            export_force_includes=export_force_includes, \
             # Add an extra define that can be checked to see if a project is built as a DLL or not.
             # Needed for dllimport on windows.
             export_defines=[project['name'].upper() + '_AS_DLL'])
@@ -964,6 +970,7 @@ def project(self, project_file):
             uselib=use + uselib, \
             features=feature, \
             export_system_includes=export_includes, \
+            export_force_includes=export_force_includes, \
             # Add an extra define that can be checked to see if a project is built as a
             # static library or not.
             # This has been added because of the one above,
@@ -1047,6 +1054,7 @@ def process_extra_use(self):
     self.tmp_use_seen = [] # we would like an ordered set
     use_prec = self.tmp_use_prec = {}
     self.system_includes = self.to_list(getattr(self, 'system_includes', []))
+    self.force_includes = self.to_list(getattr(self, 'force_includes', []))
     names = self.to_list(getattr(self, 'use', []))
 
     for x in names:
@@ -1106,6 +1114,11 @@ def process_extra_use(self):
             self.system_includes = self.system_includes \
                 + y.to_incnodes(y.export_system_includes)
         #endif
+
+        if getattr(y, 'export_force_includes', None):
+            self.force_includes = self.force_includes \
+                + y.to_nodes(y.export_force_includes)
+        #endif
     #endfor
 #enddef
 
@@ -1130,4 +1143,31 @@ def apply_sysinc(self):
     else:
         self.env.INCPATHS = [x.path_from(cwd) for x in nodes]
     #endif
+#enddef
+
+@feature('c', 'cxx', 'system_includes')
+@after_method('propagate_uselib_vars', 'process_source', 'apply_incpaths')
+def apply_forceinc(self):
+    if not hasattr(self, 'compiled_tasks'):
+        return
+    #endif
+
+    nodes = self.to_nodes(self.to_list(getattr(self, 'force_includes', [])) \
+        + self.env.FORCEINCLUDES)
+
+    cwd = self.get_cwd()
+
+    for node in nodes:
+        self.env.append_value( \
+            'CFLAGS', \
+            [self.env.FORCEINCFLAG] + [node.path_from(cwd)])
+
+        self.env.append_value( \
+            'CXXFLAGS', \
+            [self.env.FORCEINCFLAG] + [node.path_from(cwd)])
+    #endfor
+
+    for task in self.compiled_tasks:
+        [task.dep_nodes.append(node) for node in nodes]
+    #endfor
 #enddef
