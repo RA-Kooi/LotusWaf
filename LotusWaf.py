@@ -218,6 +218,7 @@ def get_use(cfg):
 # Standard waf options function, called when --help is passed
 def options(opt):
     opt.load('unity waf_unit_test')
+    opt.load('clang_compilation_database')
     opt.parser.remove_option('--alltests')
     opt.parser.remove_option('--notests')
     opt.parser.remove_option('--clear-failed')
