@@ -17,36 +17,36 @@ run_tests = False
 def load_configuration_options(config, opt):
     default_platform = sys.platform + '_x' + platform.machine()[-2:]
 
-    platform_help ='Set the target platform you want to build for.\n' + \
-            'Default is the host platform. Possible platforms are ' + \
-            config['target_platforms'][0] + ', '
+    platform_help ='Set the target platform you want to build for.\n' \
+        + 'Default is the host platform. Possible platforms are ' \
+        + config['target_platforms'][0] + ', '
 
     for i in range(1, len(config['target_platforms'])):
         platform_help += config['target_platforms'][i] + ', '
     #endfor
 
-    opt.add_option( \
-        '--release', \
-        action='store_false', \
-        dest='development', \
-        default=True, \
+    opt.add_option(
+        '--release',
+        action='store_false',
+        dest='development',
+        default=True,
         help='Make a build for production, excludes flags like warning is error.')
 
-    opt.add_option( \
-        '--target-platform', \
-        action='store', \
-        dest='target_platform', \
-        default=default_platform, \
+    opt.add_option(
+        '--target-platform',
+        action='store',
+        dest='target_platform',
+        default=default_platform,
         help=platform_help)
 
-    opt.add_option( \
-        '-c', \
-        '--target-configuration', \
-        action='store', \
-        dest='config', \
-        default=config['configurations'][0], \
-        help='Select the project configuration to use. ' \
-        + 'Valid configurations are %r [default: %s]' \
+    opt.add_option(
+        '-c',
+        '--target-configuration',
+        action='store',
+        dest='config',
+        default=config['configurations'][0],
+        help='Select the project configuration to use. '
+        + 'Valid configurations are %r [default: %s]'
         % (config['configurations'], config['configurations'][0]))
 
     toolset_help = 'Select the toolset to use for compiling. Valid toolsets are: '
@@ -65,14 +65,14 @@ def load_configuration_options(config, opt):
         toolset_help = toolset_help[:-2] + '[default: %s]' \
                 % config['toolsets'][default_platform][0]
 
-        opt.add_option( \
-            '--toolset', \
-            action='store', \
-            dest='toolset', \
-            default=config['toolsets'][default_platform][0], \
+        opt.add_option(
+            '--toolset',
+            action='store',
+            dest='toolset',
+            default=config['toolsets'][default_platform][0],
             help=toolset_help)
     else:
-        print( \
+        print(
             'No platform defined with the name ' \
             + default_platform \
             + ', unable to print toolset help.')
@@ -100,67 +100,67 @@ def load_use_options(config, opt):
         #endif
 
         if use[use_flag]['common']['optional'] == True:
-            group.add_option( \
-                '--without-' + use_flag, \
-                action='store_true', \
-                dest='without_' + use_flag, \
-                default=False, \
+            group.add_option(
+                '--without-' + use_flag,
+                action='store_true',
+                dest='without_' + use_flag,
+                default=False,
                 help='Stops ' + use_flag \
                 + ' from being included in any project.' \
                 + ' This may be overridden by the target platform.')
         #endif
 
         if use[use_flag]['type'] != 'headers':
-            group.add_option( \
-                '--with-' + use_flag, \
-                action='store', \
-                dest='with_' + use_flag, \
-                default=None, \
+            group.add_option(
+                '--with-' + use_flag,
+                action='store',
+                dest='with_' + use_flag,
+                default=None,
                 help='Links to the static or dynamic version of ' + use_flag \
                 + '. Valid inputs are [dynamic, static] ' \
                 + '[default: defined in use flag file (usually dynamic)]')
         #endif
 
-        group.add_option( \
-            '--' + use_flag + '-includes', \
-            action='append', \
-            dest=use_flag + '_includes', \
-            default=None, \
+        group.add_option(
+            '--' + use_flag + '-includes',
+            action='append',
+            dest=use_flag + '_includes',
+            default=None,
             help='Set include directories for ' + use_flag \
             + ', specify multiple times to add multiple include directories. ' \
             + 'If not specified, the default of the use_flags file is used, if present.')
 
         if use[use_flag]['type'] != 'headers':
-            group.add_option( \
-                '--' + use_flag + '-libpath', \
-                action='append', \
-                dest=use_flag + '_libpath', \
-                default=None, \
+            group.add_option(
+                '--' + use_flag + '-libpath',
+                action='append',
+                dest=use_flag + '_libpath',
+                default=None,
                 help='Set dynamic link search directories for ' + use_flag \
                 + ', specify multiple times to add multiple search directories. ' \
                 + 'If not specified, the default of the use_flags file is used, if present.')
 
-            group.add_option( \
-                '--' + use_flag + '-lib', \
-                action='store', \
-                dest=use_flag + '_lib', \
-                default=None, \
+            group.add_option(
+                '--' + use_flag + '-lib',
+                action='store',
+                dest=use_flag + '_lib',
+                default=None,
                 help='Set the name of the dynamic link library to link to (without lib suffix).')
 
-            group.add_option( \
-                '--' + use_flag + '-stlibpath', \
-                action='append', \
-                dest=use_flag + '_stlibpath', \
-                default=None, \
+            group.add_option(
+                '--' + use_flag + '-stlibpath',
+                action='append',
+                dest=use_flag + '_stlibpath',
+                default=None,
                 help='Set static link search directories for ' + use_flag \
                 + ', specify multiple times to add multiple search directories. ' \
                 + 'If not specified, the default of the use_flags file is used, if present.')
 
-            group.add_option( \
-                '--' + use_flag + '-stlib', \
-                action='store', \
-                dest=use_flag + '_stlib', \
-                default=None, \
+            group.add_option(
+                '--' + use_flag + '-stlib',
+                action='store',
+                dest=use_flag + '_stlib',
+                default=None,
                 help='Set the name of the static link library to link to (without lib suffix).')
         #endif
     #endfor
@@ -171,11 +171,18 @@ def get_toolset(cfg):
     toolset = []
     file = str()
     if type(cfg) is ConfigurationContext or type(cfg) is OptionsContext:
-        file = os.path.normcase(os.path.normpath(os.path.join('Toolsets', \
-                cfg.env.cur_toolset + '.lotus_toolset')))
+        file = os.path.normcase(
+                os.path.normpath(
+                    os.path.join(
+                        'Toolsets',
+                        cfg.env.cur_toolset + '.lotus_toolset')))
     else:
-        file = os.path.normcase(os.path.normpath(os.path.join(cfg.top_dir, \
-            'Toolsets/' + cfg.env.cur_toolset + '.lotus_toolset')))
+        file = os.path.normcase(
+                os.path.normpath(
+                    os.path.join(
+                        cfg.top_dir,
+                        'Toolsets',
+                        cfg.env.cur_toolset + '.lotus_toolset')))
     #endif
 
     with open(file, encoding='utf-8') as toolset_file:
@@ -187,10 +194,15 @@ def get_toolset(cfg):
 def get_config(cfg):
     file = str()
     if type(cfg) is ConfigurationContext or type(cfg) is OptionsContext:
-        file = 'project_configurations.lotus_config'
+        file = os.path.normcase(
+                os.path.normpath(
+                    os.path.join('project_configurations.lotus_config')))
     else:
-        file = os.path.normcase(os.path.normpath(os.path.join(cfg.top_dir, \
-            'project_configurations.lotus_config')))
+        file = os.path.normcase(
+                os.path.normpath(
+                    os.path.join(
+                        cfg.top_dir,
+                        'project_configurations.lotus_config')))
     #endif
 
     with open(file, encoding='utf-8') as config_file:
@@ -203,11 +215,16 @@ def get_use(cfg):
 
     file = str()
     if type(cfg) is ConfigurationContext or type(cfg) is OptionsContext:
-        file = os.path.normcase(os.path.normpath( \
-            os.path.join('UseFlags', 'use_flags.lotus_use')))
+        file = os.path.normcase(
+                os.path.normpath(
+                    os.path.join('UseFlags', 'use_flags.lotus_use')))
     else:
-        file = os.path.normcase(os.path.normpath(os.path.join(cfg.top_dir, \
-            os.path.join('UseFlags', 'use_flags.lotus_use'))))
+        file = os.path.normcase(
+                os.path.normpath(
+                    os.path.join(
+                        cfg.top_dir,
+                        'UseFlags',
+                        'use_flags.lotus_use')))
     #endif
 
     with open(file, encoding='utf-8') as config_file:
@@ -260,13 +277,15 @@ def configure_single_use(cfg, use, use_flag):
     #endif
 
     if type != 'flags' and not 'optional' in use[use_flag]['common']:
-        cfg.fatal(use_flag + ': An "optional" directive is required in a common' + \
-            ' block, where the type is not "flags"!')
+        cfg.fatal(use_flag \
+            + ': An "optional" directive is required in a common' \
+            + ' block, where the type is not "flags"!')
     #endif
 
     if type != 'flags' and not 'code' in use[use_flag]['common']:
-        cfg.fatal(use_flag + ': A "code" directive is required in a common' + \
-            ' block, where the type is not "flags"!')
+        cfg.fatal(use_flag \
+            + ': A "code" directive is required in a common' \
+            + ' block, where the type is not "flags"!')
     #endif
 
     if not cfg.options.target_platform in use[use_flag]['platforms']:
@@ -307,8 +326,9 @@ def configure_single_use(cfg, use, use_flag):
     #endfor
 
     if type != 'flags':
-        file = os.path.normcase(os.path.normpath(os.path.join('UseFlags', \
-            use[use_flag]['common']['code'])))
+        file = os.path.normcase(
+            os.path.normpath(
+                os.path.join('UseFlags', use[use_flag]['common']['code'])))
         with open(file, encoding='utf-8') as source_file:
             source = source_file.read();
         #endwith
@@ -389,13 +409,13 @@ def configure_single_use(cfg, use, use_flag):
         cur_conf = cfg.env.cur_conf
 
         def make_flags_absolute(relative_path):
-            return os.path.normcase(os.path.normpath( \
-                os.path.join(cfg.path.abspath(), relative_path)))
+            return os.path.normcase(
+                os.path.normpath(
+                    os.path.join(cfg.path.abspath(), relative_path)))
         #enddef
 
-        flags[toolset]['includes'] = list(map( \
-            make_flags_absolute, \
-            flags[toolset]['includes']))
+        flags[toolset]['includes'] = list(
+                map(make_flags_absolute, flags[toolset]['includes']))
 
         if 'defines' in use[use_flag][toolset]:
             read_option('defines', 'base', use[use_flag][toolset]['defines'])
@@ -403,9 +423,9 @@ def configure_single_use(cfg, use, use_flag):
 
             for option in ['stlib', 'shlib']:
                 read_option('defines', option, use[use_flag][toolset]['defines'])
-                read_option( \
-                    'defines', \
-                    option + '_' + cur_conf, \
+                read_option(
+                    'defines',
+                    option + '_' + cur_conf,
                     use[use_flag][toolset]['defines'])
             #endfor
         #endif
@@ -467,9 +487,11 @@ def configure_single_use(cfg, use, use_flag):
 
             # Make library paths absolute
             for i in range(len(flags[toolset]['lib_paths'])):
-                flags[toolset]['lib_paths'][i] = \
-                        os.path.normcase(os.path.normpath(os.path.join( \
-                        cfg.path.abspath(), flags[toolset]['lib_paths'][i])))
+                flags[toolset]['lib_paths'][i] = os.path.normcase(
+                    os.path.normpath(
+                        os.path.join(
+                            cfg.path.abspath(),
+                            flags[toolset]['lib_paths'][i])))
             #endfor
         #endif
 
@@ -487,25 +509,25 @@ def configure_single_use(cfg, use, use_flag):
     #endif
 
     # These flags are additive
-    defines = flags[cfg.env.cur_toolset]['defines'] + \
-        flags[cfg.env.cur_platform]['defines'] + \
-        flags['common']['defines']
+    defines = flags[cfg.env.cur_toolset]['defines'] \
+        + flags[cfg.env.cur_platform]['defines'] \
+        + flags['common']['defines']
 
-    includes = flags[cfg.env.cur_toolset]['includes'] + \
-        flags[cfg.env.cur_platform]['includes'] + \
-        flags['common']['includes']
+    includes = flags[cfg.env.cur_toolset]['includes'] \
+        + flags[cfg.env.cur_platform]['includes'] \
+        + flags['common']['includes']
 
-    cc_flags = flags[cfg.env.cur_toolset]['cc_flags'] + \
-        flags[cfg.env.cur_platform]['cc_flags'] + \
-        flags['common']['cc_flags']
+    cc_flags = flags[cfg.env.cur_toolset]['cc_flags'] \
+        + flags[cfg.env.cur_platform]['cc_flags'] \
+        + flags['common']['cc_flags']
 
-    cxx_flags = flags[cfg.env.cur_toolset]['cxx_flags'] + \
-        flags[cfg.env.cur_platform]['cxx_flags'] + \
-        flags['common']['cxx_flags']
+    cxx_flags = flags[cfg.env.cur_toolset]['cxx_flags'] \
+        + flags[cfg.env.cur_platform]['cxx_flags'] \
+        + flags['common']['cxx_flags']
 
-    use = flags[cfg.env.cur_toolset]['use'] + \
-        flags[cfg.env.cur_platform]['use'] + \
-        flags['common']['use']
+    use = flags[cfg.env.cur_toolset]['use'] \
+        + flags[cfg.env.cur_platform]['use'] \
+        + flags['common']['use']
 
     # Linking related flags however are not
     ld_flags = []
@@ -547,45 +569,45 @@ def configure_single_use(cfg, use, use_flag):
 
     if type == 'lib':
         if cfg.options.__dict__['with_' + use_flag] == 'dynamic':
-            cfg.check_cxx( \
-                fragment=source, \
-                use=use + [use_flag] + ['EXE'], \
-                uselib_store=use_flag, \
-                cxxflags=cxx_flags, \
-                cflags=cc_flags, \
-                ldflags=ld_flags, \
-                libpath=lib_paths, \
-                lib=libs, \
-                defines=defines, \
-                system_includes=includes, \
-                msg='Checking for dynamic library <' + use_flag + '>', \
+            cfg.check_cxx(
+                fragment=source,
+                use=use + [use_flag] + ['EXE'],
+                uselib_store=use_flag,
+                cxxflags=cxx_flags,
+                cflags=cc_flags,
+                ldflags=ld_flags,
+                libpath=lib_paths,
+                lib=libs,
+                defines=defines,
+                system_includes=includes,
+                msg='Checking for dynamic library <' + use_flag + '>',
                 mandatory=not optional)
         elif cfg.options.__dict__['with_' + use_flag] == 'static':
-            cfg.check_cxx( \
-                fragment=source, \
-                use=use + [use_flag] + ['EXE'], \
-                uselib_store=use_flag, \
-                cxxflags=cxx_flags, \
-                cflags=cc_flags, \
-                ldflags=ld_flags, \
-                stlibpath=lib_paths, \
-                stlib=libs, \
-                defines=defines, \
-                system_includes=includes, \
-                msg='Checking for static library <' + use_flag + '>', \
+            cfg.check_cxx(
+                fragment=source,
+                use=use + [use_flag] + ['EXE'],
+                uselib_store=use_flag,
+                cxxflags=cxx_flags,
+                cflags=cc_flags,
+                ldflags=ld_flags,
+                stlibpath=lib_paths,
+                stlib=libs,
+                defines=defines,
+                system_includes=includes,
+                msg='Checking for static library <' + use_flag + '>',
                 mandatory=not optional)
         #endif
     elif type == 'headers': # header only lib
-        cfg.check_cxx( \
-            fragment=source, \
-            use=use + [use_flag] + ['EXE'], \
-            uselib_store=use_flag, \
-            defines=defines, \
-            cxxflags=cxx_flags, \
-            cflags=cc_flags, \
-            ldflags=ld_flags, \
-            system_includes=includes, \
-            msg='Checking for header only library <' + use_flag +'>', \
+        cfg.check_cxx(
+            fragment=source,
+            use=use + [use_flag] + ['EXE'],
+            uselib_store=use_flag,
+            defines=defines,
+            cxxflags=cxx_flags,
+            cflags=cc_flags,
+            ldflags=ld_flags,
+            system_includes=includes,
+            msg='Checking for header only library <' + use_flag + '>',
             mandatory=not optional)
     elif type == 'flags':
         print('Adding extra flags for <' + use_flag + '>')
@@ -718,8 +740,8 @@ def configure(cfg):
     cfg.env.SYSINCLUDES = []
 
     for path in toolset['system_includes']:
-            flag = [os.path.normcase(os.path.normpath(os.path.join( \
-                cfg.path.abspath(), path)))]
+            flag = [os.path.normcase(
+                os.path.normpath(os.path.join(cfg.path.abspath(), path)))]
             cfg.env.SYSINCLUDES += flag
     #endfor
 
@@ -829,9 +851,9 @@ def project(self, project_file):
         read_option(defines, 'base', project['defines'])
         read_option(defines, cur_conf, project['defines'])
         read_option(defines, project['type'], project['defines'])
-        read_option( \
-            defines, \
-            project['type'] + '_' + self.env.cur_conf, \
+        read_option(
+            defines,
+            project['type'] + '_' + self.env.cur_conf,
             project['defines'])
     #endif
 
@@ -886,16 +908,14 @@ def project(self, project_file):
     #endif
 
     def make_flags_absolute(relative_path):
-        return os.path.normcase( \
-            os.path.normpath( \
-                os.path.join(self.path.abspath(), relative_path)))
+        return os.path.normcase(
+            os.path.normpath(os.path.join(self.path.abspath(), relative_path)))
     #enddef
 
     export_includes = []
     if 'export_includes' in project:
-        project['export_includes'] = list(map( \
-            make_flags_absolute,
-            project['export_includes']))
+        project['export_includes'] = list(
+            map(make_flags_absolute, project['export_includes']))
 
         export_includes = project['export_includes']
     #endif
@@ -934,82 +954,82 @@ def project(self, project_file):
 
     task_gen = None
     if project['type'] == 'shlib':
-        self.shlib( \
-            name=project['name'], \
-            source=sources, \
-            target=target, \
-            vnum=version, \
-            defines=defines, \
-            includes=includes,\
-            lib=lib, \
-            libpath=lib_path, \
-            stlib=stlib, \
-            stlibpath=stlib_path, \
-            rpath=rpath, \
-            use=use, \
-            uselib=use + uselib, \
-            features=feature, \
-            export_system_includes=export_includes, \
-            export_force_includes=export_force_includes, \
+        self.shlib(
+            name=project['name'],
+            source=sources,
+            target=target,
+            vnum=version,
+            defines=defines,
+            includes=includes,
+            lib=lib,
+            libpath=lib_path,
+            stlib=stlib,
+            stlibpath=stlib_path,
+            rpath=rpath,
+            use=use,
+            uselib=use + uselib,
+            features=feature,
+            export_system_includes=export_includes,
+            export_force_includes=export_force_includes,
             # Add an extra define that can be checked to see if a project is built as a DLL or not.
             # Needed for dllimport on windows.
             export_defines=[project['name'].upper() + '_AS_DLL'])
     elif project['type'] == 'stlib':
-        self.stlib( \
-            name=project['name'], \
-            source=sources, \
-            target=target, \
-            vnum=version, \
-            defines=defines, \
-            includes=includes, \
-            lib=lib, \
-            libpath=lib_path, \
-            stlib=stlib, \
-            stlibpath=stlib_path, \
-            rpath=rpath, \
-            use=use, \
-            uselib=use + uselib, \
-            features=feature, \
-            export_system_includes=export_includes, \
-            export_force_includes=export_force_includes, \
+        self.stlib(
+            name=project['name'],
+            source=sources,
+            target=target,
+            vnum=version,
+            defines=defines,
+            includes=includes,
+            lib=lib,
+            libpath=lib_path,
+            stlib=stlib,
+            stlibpath=stlib_path,
+            rpath=rpath,
+            use=use,
+            uselib=use + uselib,
+            features=feature,
+            export_system_includes=export_includes,
+            export_force_includes=export_force_includes,
             # Add an extra define that can be checked to see if a project is built as a
             # static library or not.
             # This has been added because of the one above,
             # if this is for whatever reason ever needed.
             export_defines=[project['name'].upper() + '_AS_LIB'])
     elif project['type'] == 'exe':
-        self.program( \
-            name=project['name'], \
-            source=sources, \
-            target=target, \
-            vnum=version, \
-            defines=defines, \
-            includes=includes, \
-            lib=lib, \
-            libpath=lib_path, \
-            stlib=stlib, \
-            stlibpath=stlib_path, \
-            rpath=rpath, \
-            use=use + ['EXE'], \
-            uselib=use + uselib, \
-            features=feature, \
+        self.program(
+            name=project['name'],
+            source=sources,
+            target=target,
+            vnum=version,
+            defines=defines,
+            includes=includes,
+            lib=lib,
+            libpath=lib_path,
+            stlib=stlib,
+            stlibpath=stlib_path,
+            rpath=rpath,
+            use=use + ['EXE'],
+            uselib=use + uselib,
+            features=feature,
             export_system_includes=export_includes)
     elif project['type'] == 'test':
-        self.program( \
-            name=project['name'], \
-            source=sources, \
-            target=target, \
-            vnum=version, \
-            defines=defines, \
-            includes=includes, \
-            lib=lib, \
-            libpath=lib_path, \
-            stlib=stlib, \
-            stlibpath=stlib_path, \
-            rpath=rpath, \
-            use=use + ['EXE'], \
-            uselib=use + uselib, \
-            features=feature + ' test', \
+        self.program(
+            name=project['name'],
+            source=sources,
+            target=target,
+            vnum=version,
+            defines=defines,
+            includes=includes,
+            lib=lib,
+            libpath=lib_path,
+            stlib=stlib,
+            stlibpath=stlib_path,
+            rpath=rpath,
+            use=use + ['EXE'],
+            uselib=use + uselib,
+            features=feature + ' test',
             export_system_includes=export_includes)
     #endif
 #enddef
@@ -1126,19 +1146,20 @@ def process_extra_use(self):
 @feature('c', 'cxx', 'system_includes')
 @after_method('propagate_uselib_vars', 'process_source', 'apply_incpaths')
 def apply_sysinc(self):
-    nodes = self.to_incnodes(self.to_list(getattr(self, 'system_includes', [])) \
+    nodes = self.to_incnodes(
+        self.to_list(getattr(self, 'system_includes', [])) \
         + self.env.SYSINCLUDES)
     self.includes_nodes += nodes
     cwd = self.get_cwd()
 
     if self.env.SYSINCFLAG:
         for node in nodes:
-            self.env.append_value( \
-                'CFLAGS', \
+            self.env.append_value(
+                'CFLAGS',
                 [self.env.SYSINCFLAG] + [node.path_from(cwd)])
 
-            self.env.append_value( \
-                'CXXFLAGS', \
+            self.env.append_value(
+                'CXXFLAGS',
                 [self.env.SYSINCFLAG] + [node.path_from(cwd)])
         #endfor
     else:
@@ -1159,12 +1180,12 @@ def apply_forceinc(self):
     cwd = self.get_cwd()
 
     for node in nodes:
-        self.env.append_value( \
-            'CFLAGS', \
+        self.env.append_value(
+            'CFLAGS',
             [self.env.FORCEINCFLAG] + [node.path_from(cwd)])
 
-        self.env.append_value( \
-            'CXXFLAGS', \
+        self.env.append_value(
+            'CXXFLAGS',
             [self.env.FORCEINCFLAG] + [node.path_from(cwd)])
     #endfor
 
