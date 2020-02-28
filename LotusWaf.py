@@ -1145,6 +1145,7 @@ def process_extra_use(self):
 
 @feature('c', 'cxx', 'system_includes')
 @after_method('propagate_uselib_vars', 'process_source', 'apply_incpaths')
+@before_method('add_pdb_per_object')
 def apply_sysinc(self):
     nodes = self.to_incnodes(
         self.to_list(getattr(self, 'system_includes', [])) \
@@ -1169,6 +1170,7 @@ def apply_sysinc(self):
 
 @feature('c', 'cxx', 'system_includes')
 @after_method('propagate_uselib_vars', 'process_source', 'apply_incpaths')
+@before_method('add_pdb_per_object')
 def apply_forceinc(self):
     if not hasattr(self, 'compiled_tasks'):
         return
