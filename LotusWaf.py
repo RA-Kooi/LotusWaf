@@ -49,20 +49,21 @@ def load_configuration_options(config, opt):
         + 'Valid configurations are %r [default: %s]'
         % (config['configurations'], config['configurations'][0]))
 
-    toolset_help = 'Select the toolset to use for compiling. Valid toolsets are: '
+    toolset_help = 'Select the toolset to use for compiling. Valid toolsets are:\n'
     for _platform in config['toolsets']:
-        toolset_help = toolset_help + '{ platform: ' + _platform + ': '
+        toolset_help = toolset_help + '{\n\tplatform: ' + _platform + ': '
 
+        toolset_help += '\n\ttoolsets: ['
         for _toolset in config['toolsets'][_platform]:
-            toolset_help = toolset_help + 'toolset: ' + _toolset + ', '
+            toolset_help += _toolset + ', '
         #endfor
 
-        toolset_help = toolset_help[:-2]
-        toolset_help = toolset_help + ' }, '
+        toolset_help = toolset_help[:-2] + ']'
+        toolset_help += '\n},\n'
     #endfor
 
     if default_platform in config['toolsets']:
-        toolset_help = toolset_help[:-2] + '[default: %s]' \
+        toolset_help = toolset_help[:-2] + '\n[default: %s]' \
                 % config['toolsets'][default_platform][0]
 
         opt.add_option(
