@@ -232,6 +232,41 @@ def get_use(cfg):
     #endwith
 #enddef
 
+def format_option_override(self, option):
+    from optparse import textwrap
+
+    result = []
+    opts = self.option_strings[option]
+    opt_width = self.help_position - self.current_indent - 2
+
+    if len(opts) > opt_width:
+        opts = "%*s%s\n" % (self.current_indent, "", opts)
+        indent_first = self.help_position
+    else: # start help on same line as opts
+        opts = "%*s%-*s  " % (self.current_indent, "", opt_width, opts)
+        indent_first = 0
+    #endif
+
+    result.append(opts)
+
+    if option.help:
+        help_text = self.expand_default(option)
+        help_lines = []
+
+        for para in help_text.split("\n"):
+            help_lines.extend(textwrap.wrap(para, self.help_width))
+        #endfor
+
+        result.append("%*s%s\n" % (indent_first, "", help_lines[0]))
+        result.extend(["%*s%s\n" % (self.help_position, "", line) for line in help_lines[1:]])
+        result.append("\n")
+    elif opts[-1] != "\n":
+        result.append("\n")
+    #endif
+
+    return "".join(result)
+#enddef
+
 # Standard waf options function, called when --help is passed
 def options(opt):
     opt.load('unity waf_unit_test')
@@ -244,6 +279,17 @@ def options(opt):
     opt.parser.remove_option('--bindir')
     opt.parser.remove_option('--out')
     opt.parser.remove_option('--top')
+
+    def wrapper(opt, fn):
+        def inner_wrapper(option):
+            return fn(opt.parser.formatter, option)
+        #enddef
+
+        return inner_wrapper
+    #enddef
+
+    opt.parser.formatter.format_option = wrapper(opt, format_option_override)
+
     config = get_config(opt)
 
     load_configuration_options(config, opt)
