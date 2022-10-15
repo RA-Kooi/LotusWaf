@@ -302,7 +302,7 @@ def configure_single_use(cfg, use, use_flag):
     if type != 'flags' and use[use_flag][optional_platform]['optional'] == True:
         optional = True
         if cfg.options.__dict__['without_' + use_flag] == True:
-            print('[' + use_flag + '] Disabled, skipping...')
+            cfg.msg('Checking for library <' + use_flag + '>', 'Disabled, skipping...', color='YELLOW')
             return
         #endif
     #endif
@@ -610,7 +610,7 @@ def configure_single_use(cfg, use, use_flag):
             msg='Checking for header only library <' + use_flag + '>',
             mandatory=not optional)
     elif type == 'flags':
-        print('Adding extra flags for <' + use_flag + '>')
+        cfg.msg('Adding extra flags for <' + use_flag + '>', '✔')
         cfg.env['CFLAGS_' + use_flag] = cc_flags
         cfg.env['CXXFLAGS_' + use_flag] = cxx_flags
         cfg.env['LDFLAGS_' + use_flag] = ld_flags
