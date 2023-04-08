@@ -433,6 +433,9 @@ def configure(cfg: ConfigurationContext):
     cfg.load(toolset['cxx'])
     cfg.load('clang_compilation_database')
 
+    cfg.env.COMPILER_CC = cfg.env['CC']
+    cfg.env.COMPILER_CXX = cfg.env['CXX']
+
     if toolset['cc'] == 'msvc' or toolset['cxx'] == 'msvc':
         cfg.load('msvc_pdb')
     #endif
