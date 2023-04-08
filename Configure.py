@@ -378,9 +378,6 @@ def configure_single_use(cfg, use, use_flag):
 # Standard waf configuration function, called when configure is passed
 # Here we load, parse and cache the toolset passed to waf
 def configure(cfg: ConfigurationContext):
-    USELIB_VARS['c'].add('SYSINCLUDES')
-    USELIB_VARS['cxx'].add('SYSINCLUDES')
-
     if sysconfig.get_platform() == 'mingw':
         Logs.enable_colors(2)
     #endif
@@ -440,17 +437,6 @@ def configure(cfg: ConfigurationContext):
         cfg.load('msvc_pdb')
     #endif
 
-    if not 'forced_include_flag' in toolset:
-        cfg.fatal('Toolset requires a forced_include_flag attribute')
-    #endif
-
-    if toolset['forced_include_flag'] == None \
-        or toolset['forced_include_flag'] == '' \
-        or toolset['forced_include_flag'] == []:
-        cfg.fatal('forced_include_flag cannot be empty')
-    #endif
-
-    cfg.env.FORCEINCFLAG = toolset['forced_include_flag']
     cfg.env.FORCEINCLUDES = []
 
     def read_optional_flag(
@@ -486,17 +472,6 @@ def configure(cfg: ConfigurationContext):
 
     cfg.env.DEFINES += toolset['defines']['base']
     read_optional_flag('DEFINES', cfg.options.config, toolset['defines'])
-
-    if not 'system_include_flag' in toolset:
-        cfg.fatal('system_include_flag is required!')
-    #endif
-
-    system_include_flag = toolset['system_include_flag']
-
-    if not (system_include_flag == '' or system_include_flag == []):
-        print("here")
-        cfg.env.SYSINCFLAG = system_include_flag
-    #endif
 
     cfg.env.SYSINCLUDES = []
 
