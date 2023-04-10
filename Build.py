@@ -29,8 +29,6 @@ def summary(bld):
             if code:
                 Logs.pprint('CYAN', '    %s' % f)
                 Logs.pprint('RED', 'Status: %r' % code)
-                if out: Logs.pprint('RED', 'out: %r' % out)
-                if err: Logs.pprint('RED', 'err: %r' % err)
             #endif
         #endfor
     #endif
