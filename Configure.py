@@ -476,8 +476,6 @@ def configure(cfg: ConfigurationContext):
     cfg.env.DEFINES += toolset['defines']['base']
     read_optional_flag('DEFINES', cfg.options.config, toolset['defines'])
 
-    cfg.env.SYSINCLUDES = []
-
     for path in toolset['system_includes']:
             flag = [normalized_join2(cfg.path.abspath(), path)]
             cfg.env.SYSINCLUDES += flag
