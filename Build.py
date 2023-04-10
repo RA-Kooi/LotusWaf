@@ -124,6 +124,7 @@ def project(self, project_file):
     stlib = []
     stlib_path = []
     use = []
+    features = []
 
     read_option(includes, 'includes')
     read_option(export_force_includes, 'export_force_includes')
@@ -132,6 +133,7 @@ def project(self, project_file):
     read_option(stlib, 'stlib_link')
     read_option(stlib_path, 'stlib_path')
     read_option(use, 'use')
+    read_option(features, 'features')
 
     # These are use variables which are NOT propagated to the project use flag
     # This means that you should put extra compile flag uses in this
@@ -182,9 +184,9 @@ def project(self, project_file):
 
     # If a project is in unity build mode, we pass the unity feature.
     # This will call all functions with @feature('unity')
-    feature = 'nounity'
+    features.append('nounity')
     if project['unity_build'] == True:
-        feature = 'unity'
+        features.append('unity')
     #endif
 
     version = project['version']
@@ -228,7 +230,7 @@ def project(self, project_file):
             rpath=rpath,
             use=use,
             uselib=use + uselib,
-            features=feature,
+            features=features,
             export_system_includes=export_includes,
             export_force_includes=export_force_includes,
             # Add an extra define that can be checked to see if a project is
@@ -249,7 +251,7 @@ def project(self, project_file):
             rpath=rpath,
             use=use,
             uselib=use + uselib,
-            features=feature,
+            features=features,
             export_system_includes=export_includes,
             export_force_includes=export_force_includes,
             # Add an extra define that can be checked to see if a project is
@@ -271,7 +273,7 @@ def project(self, project_file):
             rpath=rpath,
             use=use + ['EXE'],
             uselib=use + uselib,
-            features=feature,
+            features=features,
             export_system_includes=export_includes)
     elif project['type'] == 'test':
         self.program(
@@ -288,7 +290,7 @@ def project(self, project_file):
             rpath=rpath,
             use=use + ['EXE'],
             uselib=use + uselib,
-            features=feature + ' test',
+            features=features + ['test'],
             export_system_includes=export_includes)
     #endif
 #enddef
