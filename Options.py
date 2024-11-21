@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
+import argparse
+
 from Common import *
 
 # Show general help output when waf --help is executed
@@ -39,7 +41,7 @@ def load_configuration_options(config, opt):
         + 'Valid configurations are %r [default: %s]'
         % (config['configurations'], config['configurations'][0]))
 
-    toolset_help = 'Select the toolset to use for compiling. Valid toolsets are:\n'
+    toolset_help = 'R|Select the toolset to use for compiling. Valid toolsets are:\n'
     for _platform in config['toolsets']:
         toolset_help = toolset_help + '{\n\tplatform: ' + _platform + ': '
 
@@ -157,43 +159,18 @@ def load_use_options(config, opt):
     #endfor
 #enddef
 
-def format_option_override(self, option):
-    from optparse import textwrap
+class SmartFormatter(argparse.HelpFormatter):
+    def _split_lines(self, text: str, width):
+        if text.startswith('R|'):
+            return text[2:].splitlines()
+        #endif
 
-    result = []
-    opts = self.option_strings[option]
-    opt_width = self.help_position - self.current_indent - 2
-
-    if len(opts) > opt_width:
-        opts = "%*s%s\n" % (self.current_indent, "", opts)
-        indent_first = self.help_position
-    else: # start help on same line as opts
-        opts = "%*s%-*s  " % (self.current_indent, "", opt_width, opts)
-        indent_first = 0
-    #endif
-
-    result.append(opts)
-
-    if option.help:
-        help_text = self.expand_default(option)
-        help_lines = []
-
-        for para in help_text.split("\n"):
-            help_lines.extend(textwrap.wrap(para, self.help_width))
-        #endfor
-
-        result.append("%*s%s\n" % (indent_first, "", help_lines[0]))
-        result.extend(["%*s%s\n" % (self.help_position, "", line) for line in help_lines[1:]])
-        result.append("\n")
-    elif opts[-1] != "\n":
-        result.append("\n")
-    #endif
-
-    return "".join(result)
-#enddef
+        return argparse.HelpFormatter._split_lines(self, text, width)
+    #enddef
+#endclass
 
 # Standard waf options function, called when --help is passed
-def options(opt):
+def options(opt: OptionsContext):
     opt.load('unity waf_unit_test')
     opt.load('clang_compilation_database')
     opt.parser.remove_option('--alltests')
@@ -213,7 +190,7 @@ def options(opt):
         return inner_wrapper
     #enddef
 
-    opt.parser.formatter.format_option = wrapper(opt, format_option_override)
+    opt.parser.formatter_class = SmartFormatter
 
     config = get_config(opt)
 
