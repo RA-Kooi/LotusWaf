@@ -1,0 +1,4 @@
+[submodule "waf"]
+	path = waf
+	url = https://gitlab.com/RA-Kooi/waf.git
+	branch = includeadditions

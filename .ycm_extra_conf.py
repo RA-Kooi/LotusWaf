@@ -1,15 +1,12 @@
 # vim: ts=4 sw=4 noexpandtab
 import os
 
+def DirectoryOfThisScript():
+	return os.path.dirname(os.path.realpath(__file__)) + os.sep
+#enddef
+
 def WafFolder():
-	cwd = os.curdir
-	for node in os.listdir(cwd):
-		wafdir = os.path.join(cwd, node)
-		isDir = os.path.isdir(wafdir)
-		if isDir and 'waf3-' in node:
-			return wafdir
-		#endif
-	#endfor
+	return os.path.join(DirectoryOfThisScript(), 'waf')
 #enddef
 
 def Settings(**kwargs):
